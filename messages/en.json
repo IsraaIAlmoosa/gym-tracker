@@ -1,0 +1,34 @@
+{
+  "app": {
+    "name": "Gym Tracker",
+    "description": "A simple app to track your gym workouts"
+  },
+  "nav": {
+    "home": "Home",
+    "workouts": "Workouts",
+    "history": "History",
+    "settings": "Settings"
+  },
+  "home": {
+    "title": "Welcome back 👋",
+    "subtitle": "Track your workouts and log your progress day by day",
+    "startWorkout": "Start a new workout",
+    "recentWorkouts": "Recent workouts",
+    "noWorkouts": "No workouts logged yet",
+    "totalWorkouts": "Total workouts",
+    "thisWeek": "This week"
+  },
+  "workouts": {
+    "title": "Workouts",
+    "addExercise": "Add exercise",
+    "sets": "Sets",
+    "reps": "Reps",
+    "weight": "Weight (kg)",
+    "save": "Save"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "theme": "Theme"
+  }
+}
