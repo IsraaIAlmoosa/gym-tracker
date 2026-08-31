@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useParams, useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 
 type Mode = 'sign-in' | 'sign-up'
 
@@ -10,6 +11,7 @@ export default function LoginPage() {
   const params = useParams()
   const router = useRouter()
   const locale = params.locale as string
+  const t = useTranslations('login')
 
   const [mode, setMode] = useState<Mode>('sign-in')
   const [email, setEmail] = useState('')
@@ -48,7 +50,7 @@ export default function LoginPage() {
       if (error) {
         setError(error.message)
       } else {
-        setMessage('Check your email to confirm your account.')
+        setMessage(t('checkEmail'))
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
@@ -79,7 +81,7 @@ export default function LoginPage() {
               fontWeight: 500,
             }}
           >
-            Sign in
+            {t('signInTab')}
           </button>
           <button
             type="button"
@@ -93,14 +95,14 @@ export default function LoginPage() {
               fontWeight: 500,
             }}
           >
-            Sign up
+            {t('signUpTab')}
           </button>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <input
             type="email"
-            placeholder="Email"
+            placeholder={t('emailPlaceholder')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -108,7 +110,7 @@ export default function LoginPage() {
           />
           <input
             type="password"
-            placeholder="Password"
+            placeholder={t('passwordPlaceholder')}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -124,13 +126,13 @@ export default function LoginPage() {
             disabled={loading}
             style={{ borderRadius: '8px', backgroundColor: 'white', padding: '12px 24px', color: 'black', fontWeight: 500, opacity: loading ? 0.6 : 1 }}
           >
-            {mode === 'sign-up' ? 'Create account' : 'Sign in'}
+            {mode === 'sign-up' ? t('createAccount') : t('signIn')}
           </button>
         </form>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#555' }}>
           <div style={{ flex: 1, height: '1px', backgroundColor: '#333' }} />
-          <span style={{ fontSize: '12px' }}>or</span>
+          <span style={{ fontSize: '12px' }}>{t('or')}</span>
           <div style={{ flex: 1, height: '1px', backgroundColor: '#333' }} />
         </div>
 
@@ -138,7 +140,7 @@ export default function LoginPage() {
           onClick={handleGoogleLogin}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', borderRadius: '8px', backgroundColor: 'white', padding: '12px 24px', color: 'black', fontWeight: 500 }}
         >
-          Sign in with Google
+          {t('signInWithGoogle')}
         </button>
       </div>
     </div>

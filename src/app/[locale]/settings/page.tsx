@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
 import GenderSettingsForm from '@/components/GenderSettingsForm';
 import type { WeightUnit } from '@/lib/units';
@@ -9,7 +10,7 @@ type Props = {
 
 export default async function SettingsPage({ params }: Props) {
   const { locale } = await params;
-  const isArabic = locale === 'ar';
+  const t = await getTranslations({ locale, namespace: 'settings' });
 
   const supabase = await createClient();
   const {
@@ -28,14 +29,6 @@ export default async function SettingsPage({ params }: Props) {
 
   const weightUnit = (profile?.preferred_weight_unit ?? 'kg') as WeightUnit;
 
-  const t = {
-    title: isArabic ? 'الإعدادات' : 'Settings',
-    back: isArabic ? '← رجوع للداشبورد' : '← Back to dashboard',
-    genderLabel: isArabic
-      ? 'حتى نخاطبك بالصيغة الصحيحة بالعربي، ونرتب اقتراحات التمارين بشكل يناسبك'
-      : "So we can address you correctly and tailor suggestions to you",
-  };
-
   return (
     <div
       style={{
@@ -51,10 +44,10 @@ export default async function SettingsPage({ params }: Props) {
         href={`/${locale}/dashboard`}
         style={{ color: '#A3A3A3', fontSize: '14px', textDecoration: 'none' }}
       >
-        {t.back}
+        {t('back')}
       </a>
 
-      <h1 style={{ fontSize: '24px', fontWeight: 700, margin: '10px 0 24px' }}>{t.title}</h1>
+      <h1 style={{ fontSize: '24px', fontWeight: 700, margin: '10px 0 24px' }}>{t('title')}</h1>
 
       <div
         style={{
@@ -65,15 +58,27 @@ export default async function SettingsPage({ params }: Props) {
         }}
       >
         <p style={{ color: '#A3A3A3', fontSize: '13px', margin: '0 0 16px', lineHeight: 1.6 }}>
-          {t.genderLabel}
+          {t('genderLabel')}
         </p>
         <GenderSettingsForm
-          locale={locale}
           initialGender={profile?.gender ?? null}
           initialAge={profile?.age ?? null}
           initialWeightUnit={weightUnit}
         />
       </div>
+
+      <a
+        href={`/${locale}/routines`}
+        style={{
+          display: 'inline-block',
+          color: '#C4F82A',
+          fontSize: '14px',
+          textDecoration: 'none',
+          marginTop: '20px',
+        }}
+      >
+        {t('manageRoutines')}
+      </a>
     </div>
   );
 }

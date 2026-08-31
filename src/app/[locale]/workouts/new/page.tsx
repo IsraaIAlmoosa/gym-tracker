@@ -8,6 +8,24 @@ type Props = {
   params: Promise<{ locale: string }>;
 };
 
+type RoutineExerciseRow = {
+  exercise_id: string;
+  order_index: number;
+};
+
+type RoutineRow = {
+  id: string;
+  name: string;
+  routine_exercises: RoutineExerciseRow[];
+};
+
+type LastSetRow = {
+  exercise_id: string;
+  weight: number;
+  reps: number;
+  created_at: string;
+};
+
 export default async function NewWorkoutPage({ params }: Props) {
   const { locale } = await params;
   const isArabic = locale === 'ar';
@@ -39,7 +57,18 @@ export default async function NewWorkoutPage({ params }: Props) {
     )
     .order(isArabic ? 'name_ar' : 'name_en');
 
-  if (profileError || exercisesError) {
+  const { data: routinesRaw, error: routinesError } = await supabase
+    .from('routines')
+    .select('id, name, routine_exercises(exercise_id, order_index)')
+    .order('created_at', { ascending: false })
+    .order('order_index', { referencedTable: 'routine_exercises', ascending: true });
+
+  const { data: lastSetsRaw, error: lastSetsError } = await supabase
+    .from('workout_sets')
+    .select('exercise_id, weight, reps, created_at')
+    .order('created_at', { ascending: false });
+
+  if (profileError || exercisesError || routinesError || lastSetsError) {
     return <LoadErrorNotice locale={locale} />;
   }
 
@@ -52,6 +81,19 @@ export default async function NewWorkoutPage({ params }: Props) {
 
   const hiddenCount = allExercises.length - availableExercises.length;
 
+  const routines = ((routinesRaw ?? []) as unknown as RoutineRow[]).map((r) => ({
+    id: r.id,
+    name: r.name,
+    exerciseIds: r.routine_exercises.map((re) => re.exercise_id),
+  }));
+
+  const lastSetByExercise: Record<string, { weight: number; reps: number }> = {};
+  for (const row of (lastSetsRaw ?? []) as unknown as LastSetRow[]) {
+    if (!lastSetByExercise[row.exercise_id]) {
+      lastSetByExercise[row.exercise_id] = { weight: row.weight, reps: row.reps };
+    }
+  }
+
   return (
     <WorkoutBuilder
       locale={locale}
@@ -60,6 +102,8 @@ export default async function NewWorkoutPage({ params }: Props) {
       gender={gender}
       age={age}
       weightUnit={weightUnit}
+      routines={routines}
+      lastSetByExercise={lastSetByExercise}
     />
   );
 }

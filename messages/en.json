@@ -9,26 +9,173 @@
     "history": "History",
     "settings": "Settings"
   },
-  "home": {
-    "title": "Welcome back 👋",
-    "subtitle": "Track your workouts and log your progress day by day",
-    "startWorkout": "Start a new workout",
-    "recentWorkouts": "Recent workouts",
-    "noWorkouts": "No workouts logged yet",
-    "totalWorkouts": "Total workouts",
-    "thisWeek": "This week"
+  "dashboard": {
+    "welcome": "Welcome, {name} 👋",
+    "defaultName": "Champion",
+    "subtitle": "Ready to start today's workout?",
+    "startWorkout": "Start New Workout",
+    "recentSessions": "Recent Sessions",
+    "noSessions": "You haven't logged a workout yet. Start your first session and it'll show up here.",
+    "insights": "Smart Insights",
+    "insightsPlaceholder": "Insights (like plateau detection) will appear here once you've logged a few workouts.",
+    "signOut": "Sign out",
+    "setsLabel": "sets",
+    "minutesLabel": "min",
+    "viewFullHistory": "View full history →",
+    "streakTitle": "Last 28 days",
+    "streakCount": "Trained {n} of {days} days",
+    "insightPr": "🏆 New PR on {name}! You lifted {weight}kg — your all-time best",
+    "insightPlateau": "Plateau on {name} — same weight ({weight}kg) for the last two sessions. Try adding weight or reps",
+    "insightProgress": "Progress! You lifted {weight}kg on {name} (up from {previousWeight}kg last time)"
   },
-  "workouts": {
-    "title": "Workouts",
-    "addExercise": "Add exercise",
-    "sets": "Sets",
+  "workoutBuilder": {
+    "title": "New Workout",
+    "back": "← Back to dashboard",
+    "backToCategories": "← All categories",
+    "pickCategory": "Choose a muscle group",
+    "hiddenNote": "{n, plural, one {# exercise} other {# exercises}} hidden based on your avoided-areas settings",
+    "noExercisesAdded": "You haven't added any exercise yet. Pick a muscle group above to start.",
+    "noExercisesInCategory": "All exercises in this group are already added",
+    "searchPlaceholder": "Search exercises...",
+    "noSearchResults": "No matching exercises",
+    "weight": "Weight ({unit})",
     "reps": "Reps",
-    "weight": "Weight (kg)",
-    "save": "Save"
+    "addSet": "Add set",
+    "setNumberLabel": "Set {n}",
+    "totalSetsCount": "{n, plural, one {# Set} other {# Sets}}",
+    "noSetsYet": "No sets logged for this exercise yet",
+    "remove": "Remove",
+    "restTitle": "Rest time",
+    "skipRest": "Skip",
+    "save": "Save workout",
+    "saving": "Saving...",
+    "errorNoSets": "Log at least one set before saving",
+    "errorGeneric": "Something went wrong while saving, please try again",
+    "startFromRoutine": "Start from a saved routine",
+    "saveAsRoutine": "Save as routine",
+    "routineNamePlaceholder": "Routine name",
+    "saveRoutine": "Save",
+    "savingRoutine": "Saving...",
+    "cancel": "Cancel",
+    "routineSaved": "Routine saved ✓",
+    "routineSaveError": "Something went wrong saving the routine, please try again",
+    "impact": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High"
+    }
   },
   "settings": {
     "title": "Settings",
-    "language": "Language",
-    "theme": "Theme"
+    "back": "← Back to dashboard",
+    "genderLabel": "So we can address you correctly and tailor suggestions to you",
+    "manageRoutines": "Manage routines →"
+  },
+  "genderSettingsForm": {
+    "male": "Male",
+    "female": "Female",
+    "ageLabel": "Age",
+    "weightUnitLabel": "Weight unit",
+    "kg": "Kilograms (kg)",
+    "lb": "Pounds (lb)",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Saved ✓",
+    "errorAge": "Enter a valid age between 13 and 100",
+    "errorGeneric": "Something went wrong, try again"
+  },
+  "login": {
+    "signInTab": "Sign in",
+    "signUpTab": "Sign up",
+    "emailPlaceholder": "Email",
+    "passwordPlaceholder": "Password",
+    "checkEmail": "Check your email to confirm your account.",
+    "createAccount": "Create account",
+    "signIn": "Sign in",
+    "or": "or",
+    "signInWithGoogle": "Sign in with Google"
+  },
+  "routines": {
+    "title": "Routines",
+    "back": "← Back to dashboard",
+    "intro": "Your saved routines — rename them, adjust exercises, or delete ones you don't need anymore"
+  },
+  "routineManager": {
+    "noRoutines": "You don't have any saved routines yet. You can create one from the new workout page.",
+    "saveName": "Save name",
+    "delete": "Delete routine",
+    "deleteConfirm": "Delete this routine?",
+    "addExercise": "+ Add exercise",
+    "cancel": "Cancel",
+    "searchPlaceholder": "Search exercises...",
+    "noResults": "No results",
+    "noExercisesInRoutine": "No exercises in this routine",
+    "minOneExercise": "A routine must keep at least one exercise",
+    "errorGeneric": "Something went wrong, try again"
+  },
+  "measurements": {
+    "title": "Body Measurements",
+    "back": "← Back to dashboard",
+    "addNew": "Add new measurement",
+    "editTitle": "Edit measurement",
+    "history": "History",
+    "noHistory": "You haven't logged any measurement yet. Add your first one above.",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this measurement?",
+    "deleteError": "Something went wrong deleting the measurement, try again",
+    "labels": {
+      "weight_kg": "Weight",
+      "waist_cm": "Waist",
+      "chest_cm": "Chest",
+      "arm_cm": "Arm",
+      "thigh_cm": "Thigh",
+      "hip_cm": "Hip"
+    }
+  },
+  "measurementForm": {
+    "date": "Date",
+    "weight": "Weight ({unit})",
+    "waist": "Waist (cm)",
+    "chest": "Chest (cm)",
+    "arm": "Arm (cm)",
+    "thigh": "Thigh (cm)",
+    "hip": "Hip (cm)",
+    "notes": "Notes (optional)",
+    "save": "Save measurement",
+    "update": "Update measurement",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "saved": "Saved ✓",
+    "errorNoValues": "Enter at least one value before saving",
+    "errorGeneric": "Something went wrong, try again"
+  },
+  "history": {
+    "title": "History",
+    "back": "← Back to dashboard",
+    "filterFrom": "From",
+    "filterTo": "To",
+    "applyFilter": "Filter",
+    "clearFilter": "Clear filter",
+    "noSessions": "You haven't logged any workout sessions yet.",
+    "noSessionsInRange": "No sessions in this date range.",
+    "setsLabel": "sets",
+    "minutesLabel": "min"
+  },
+  "units": {
+    "kg": "kg",
+    "lb": "lb"
+  },
+  "loadErrorNotice": {
+    "title": "Something went wrong",
+    "description": "We couldn't load the required data. Try refreshing the page, and if the problem keeps happening, contact support.",
+    "back": "← Back to dashboard"
+  },
+  "bottomNav": {
+    "home": "Home",
+    "history": "History",
+    "start": "Start",
+    "progress": "Progress",
+    "settings": "Settings"
   }
 }

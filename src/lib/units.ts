@@ -19,8 +19,3 @@ export function displayUnitToKg(value: number, unit: WeightUnit): number {
   const kg = unit === 'lb' ? lbToKg(value) : value;
   return Math.round(kg * 100) / 100;
 }
-
-export function weightUnitLabel(unit: WeightUnit, isArabic: boolean): string {
-  if (unit === 'lb') return isArabic ? 'باوند' : 'lb';
-  return isArabic ? 'كغم' : 'kg';
-}

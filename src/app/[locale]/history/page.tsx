@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
 import LoadErrorNotice from '@/components/LoadErrorNotice';
-import { kgToDisplayUnit, weightUnitLabel, type WeightUnit } from '@/lib/units';
+import { kgToDisplayUnit, type WeightUnit } from '@/lib/units';
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -40,6 +41,7 @@ export default async function HistoryPage({ params, searchParams }: Props) {
   const { locale } = await params;
   const { from, to } = await searchParams;
   const isArabic = locale === 'ar';
+  const t = await getTranslations({ locale, namespace: 'history' });
 
   const supabase = await createClient();
   const {
@@ -101,7 +103,8 @@ export default async function HistoryPage({ params, searchParams }: Props) {
   }
 
   const weightUnit = (profile?.preferred_weight_unit ?? 'kg') as WeightUnit;
-  const unitLabel = weightUnitLabel(weightUnit, isArabic);
+  const tUnits = await getTranslations({ locale, namespace: 'units' });
+  const unitLabel = tUnits(weightUnit);
 
   const groups: DateGroup[] = [];
   for (const session of sessionList) {
@@ -113,23 +116,6 @@ export default async function HistoryPage({ params, searchParams }: Props) {
       groups.push({ date: session.date, sessions: [{ session, exercises }] });
     }
   }
-
-  const t = {
-    title: isArabic ? 'السجل' : 'History',
-    back: isArabic ? '← رجوع للداشبورد' : '← Back to dashboard',
-    filterFrom: isArabic ? 'من تاريخ' : 'From',
-    filterTo: isArabic ? 'إلى تاريخ' : 'To',
-    applyFilter: isArabic ? 'تصفية' : 'Filter',
-    clearFilter: isArabic ? 'مسح التصفية' : 'Clear filter',
-    noSessions: isArabic
-      ? 'ما فيه أي جلسات تمرين مسجلة بعد.'
-      : "You haven't logged any workout sessions yet.",
-    noSessionsInRange: isArabic
-      ? 'ما فيه جلسات بهذا النطاق الزمني.'
-      : 'No sessions in this date range.',
-    setsLabel: isArabic ? 'سيت' : 'sets',
-    minutesLabel: isArabic ? 'د' : 'min',
-  };
 
   function formatDateHeading(dateStr: string) {
     const d = new Date(dateStr);
@@ -158,10 +144,10 @@ export default async function HistoryPage({ params, searchParams }: Props) {
         href={`/${locale}/dashboard`}
         style={{ color: '#A3A3A3', fontSize: '14px', textDecoration: 'none' }}
       >
-        {t.back}
+        {t('back')}
       </a>
 
-      <h1 style={{ fontSize: '24px', fontWeight: 700, margin: '10px 0 24px' }}>{t.title}</h1>
+      <h1 style={{ fontSize: '24px', fontWeight: 700, margin: '10px 0 24px' }}>{t('title')}</h1>
 
       <form
         method="get"
@@ -181,7 +167,7 @@ export default async function HistoryPage({ params, searchParams }: Props) {
           <label
             style={{ display: 'block', fontSize: '12px', color: '#737373', marginBottom: '6px' }}
           >
-            {t.filterFrom}
+            {t('filterFrom')}
           </label>
           <input
             type="date"
@@ -190,6 +176,7 @@ export default async function HistoryPage({ params, searchParams }: Props) {
             style={{
               backgroundColor: '#0A0A0A',
               color: '#FFFFFF',
+              colorScheme: 'dark',
               border: '1px solid #262626',
               borderRadius: '8px',
               padding: '8px 10px',
@@ -201,7 +188,7 @@ export default async function HistoryPage({ params, searchParams }: Props) {
           <label
             style={{ display: 'block', fontSize: '12px', color: '#737373', marginBottom: '6px' }}
           >
-            {t.filterTo}
+            {t('filterTo')}
           </label>
           <input
             type="date"
@@ -210,6 +197,7 @@ export default async function HistoryPage({ params, searchParams }: Props) {
             style={{
               backgroundColor: '#0A0A0A',
               color: '#FFFFFF',
+              colorScheme: 'dark',
               border: '1px solid #262626',
               borderRadius: '8px',
               padding: '8px 10px',
@@ -230,7 +218,7 @@ export default async function HistoryPage({ params, searchParams }: Props) {
             cursor: 'pointer',
           }}
         >
-          {t.applyFilter}
+          {t('applyFilter')}
         </button>
         {hasFilter && (
           <a
@@ -242,14 +230,14 @@ export default async function HistoryPage({ params, searchParams }: Props) {
               padding: '9px 0',
             }}
           >
-            {t.clearFilter}
+            {t('clearFilter')}
           </a>
         )}
       </form>
 
       {groups.length === 0 ? (
         <p style={{ color: '#A3A3A3', fontSize: '14px' }}>
-          {hasFilter ? t.noSessionsInRange : t.noSessions}
+          {hasFilter ? t('noSessionsInRange') : t('noSessions')}
         </p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -288,11 +276,11 @@ export default async function HistoryPage({ params, searchParams }: Props) {
                         }}
                       >
                         <span>
-                          {totalSets} {t.setsLabel}
+                          {totalSets} {t('setsLabel')}
                         </span>
                         {session.duration && (
                           <span>
-                            {session.duration} {t.minutesLabel}
+                            {session.duration} {t('minutesLabel')}
                           </span>
                         )}
                       </div>

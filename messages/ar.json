@@ -9,26 +9,173 @@
     "history": "السجل",
     "settings": "الإعدادات"
   },
-  "home": {
-    "title": "أهلاً بك 👋",
-    "subtitle": "تابع تمارينك وسجّل تقدمك يوماً بيوم",
+  "dashboard": {
+    "welcome": "أهلاً، {name} 👋",
+    "defaultName": "{gender, select, female {بطلة} other {بطل}}",
+    "subtitle": "{gender, select, female {جاهزة لتبدئي تمرين اليوم؟} other {جاهز لتبدأ تمرين اليوم؟}}",
     "startWorkout": "ابدأ تمرين جديد",
-    "recentWorkouts": "آخر التمارين",
-    "noWorkouts": "لا توجد تمارين مسجلة بعد",
-    "totalWorkouts": "إجمالي التمارين",
-    "thisWeek": "هذا الأسبوع"
+    "recentSessions": "آخر التمارين",
+    "noSessions": "لسا ما سجلت أي تمرين. ابدأ أول جلسة وراح تظهر هنا.",
+    "insights": "التحليل الذكي",
+    "insightsPlaceholder": "راح تظهر هنا ملاحظات (زي كشف الركود) بعد ما تسجل كم تمرين.",
+    "signOut": "تسجيل خروج",
+    "setsLabel": "مجموعة",
+    "minutesLabel": "د",
+    "viewFullHistory": "عرض كل السجل →",
+    "streakTitle": "آخر 28 يوم",
+    "streakCount": "تمرنت {n} يوم من {days}",
+    "insightPr": "🏆 رقم قياسي جديد بـ{name}! رفعت {weight} كغم — أعلى وزن ليك بهذا التمرين",
+    "insightPlateau": "ركود بـ{name} — نفس الوزن ({weight} كغم) آخر مرتين. جرب تزيد الوزن أو التكرارات",
+    "insightProgress": "تقدم! رفعت {weight} كغم بـ{name} (كان {previousWeight} كغم آخر مرة)"
   },
-  "workouts": {
-    "title": "التمارين",
-    "addExercise": "إضافة تمرين",
-    "sets": "المجموعات",
+  "workoutBuilder": {
+    "title": "تسجيل تمرين جديد",
+    "back": "← رجوع للداشبورد",
+    "backToCategories": "← كل المجموعات",
+    "pickCategory": "اختر مجموعة عضلية",
+    "hiddenNote": "تم إخفاء {n} تمرين بسبب إعدادات المناطق المتجنبة",
+    "noExercisesAdded": "ما ضفت أي تمرين للجلسة بعد. اختر مجموعة عضلية من فوق وابدأ.",
+    "noExercisesInCategory": "كل تمارين هذي المجموعة مضافة بالفعل",
+    "searchPlaceholder": "ابحث عن تمرين...",
+    "noSearchResults": "ما فيه نتائج مطابقة",
+    "weight": "الوزن ({unit})",
     "reps": "التكرارات",
-    "weight": "الوزن (كجم)",
-    "save": "حفظ"
+    "addSet": "إضافة مجموعة",
+    "setNumberLabel": "مجموعة {n}",
+    "totalSetsCount": "{n} مجموعة",
+    "noSetsYet": "لسا ما سجلت أي مجموعة لهذا التمرين",
+    "remove": "إزالة",
+    "restTitle": "وقت الراحة",
+    "skipRest": "تخطي",
+    "save": "حفظ التمرين",
+    "saving": "جارٍ الحفظ...",
+    "errorNoSets": "سجل مجموعة وحدة على الأقل قبل الحفظ",
+    "errorGeneric": "صار خطأ أثناء الحفظ، حاول مرة ثانية",
+    "startFromRoutine": "ابدأ من قالب محفوظ",
+    "saveAsRoutine": "احفظ كقالب",
+    "routineNamePlaceholder": "اسم القالب",
+    "saveRoutine": "حفظ",
+    "savingRoutine": "جارٍ الحفظ...",
+    "cancel": "إلغاء",
+    "routineSaved": "تم حفظ القالب ✓",
+    "routineSaveError": "صار خطأ أثناء حفظ القالب، حاول مرة ثانية",
+    "impact": {
+      "low": "خفيف",
+      "medium": "متوسط",
+      "high": "عالي"
+    }
   },
   "settings": {
     "title": "الإعدادات",
-    "language": "اللغة",
-    "theme": "المظهر"
+    "back": "← رجوع للداشبورد",
+    "genderLabel": "حتى نخاطبك بالصيغة الصحيحة بالعربي، ونرتب اقتراحات التمارين بشكل يناسبك",
+    "manageRoutines": "إدارة قوالب التمارين →"
+  },
+  "genderSettingsForm": {
+    "male": "ذكر",
+    "female": "أنثى",
+    "ageLabel": "العمر",
+    "weightUnitLabel": "وحدة الوزن",
+    "kg": "كيلوغرام (كغم)",
+    "lb": "باوند (lb)",
+    "save": "حفظ",
+    "saving": "جارٍ الحفظ...",
+    "saved": "تم الحفظ ✓",
+    "errorAge": "أدخل عمر صحيح بين 13 و100",
+    "errorGeneric": "صار خطأ، حاول مرة ثانية"
+  },
+  "login": {
+    "signInTab": "تسجيل الدخول",
+    "signUpTab": "إنشاء حساب",
+    "emailPlaceholder": "البريد الإلكتروني",
+    "passwordPlaceholder": "كلمة المرور",
+    "checkEmail": "تحقق من بريدك الإلكتروني لتأكيد حسابك.",
+    "createAccount": "إنشاء حساب",
+    "signIn": "تسجيل الدخول",
+    "or": "أو",
+    "signInWithGoogle": "تسجيل الدخول عبر جوجل"
+  },
+  "routines": {
+    "title": "قوالب التمارين",
+    "back": "← رجوع للداشبورد",
+    "intro": "قوالبك المحفوظة — عدّل الأسماء أو التمارين، أو احذف قالب ما تحتاجه بعد"
+  },
+  "routineManager": {
+    "noRoutines": "ما عندك أي قالب محفوظ بعد. تقدر تسوي وحد من صفحة تسجيل تمرين جديد.",
+    "saveName": "حفظ الاسم",
+    "delete": "حذف القالب",
+    "deleteConfirm": "متأكد تبي تحذف هذا القالب؟",
+    "addExercise": "+ إضافة تمرين",
+    "cancel": "إلغاء",
+    "searchPlaceholder": "ابحث عن تمرين...",
+    "noResults": "ما فيه نتائج",
+    "noExercisesInRoutine": "ما فيه تمارين بهذا القالب",
+    "minOneExercise": "لازم يبقى تمرين وحد على الأقل بالقالب",
+    "errorGeneric": "صار خطأ، حاول مرة ثانية"
+  },
+  "measurements": {
+    "title": "قياسات الجسم",
+    "back": "← رجوع للداشبورد",
+    "addNew": "إضافة قياس جديد",
+    "editTitle": "تعديل القياس",
+    "history": "السجل",
+    "noHistory": "لسا ما سجلت أي قياس. أضف أول قياس من فوق.",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "deleteConfirm": "متأكد تبي تحذف هذا القياس؟",
+    "deleteError": "صار خطأ أثناء حذف القياس، حاول مرة ثانية",
+    "labels": {
+      "weight_kg": "الوزن",
+      "waist_cm": "الخصر",
+      "chest_cm": "الصدر",
+      "arm_cm": "الذراع",
+      "thigh_cm": "الفخذ",
+      "hip_cm": "الورك"
+    }
+  },
+  "measurementForm": {
+    "date": "التاريخ",
+    "weight": "الوزن ({unit})",
+    "waist": "الخصر (سم)",
+    "chest": "الصدر (سم)",
+    "arm": "الذراع (سم)",
+    "thigh": "الفخذ (سم)",
+    "hip": "الورك (سم)",
+    "notes": "ملاحظات (اختياري)",
+    "save": "حفظ القياس",
+    "update": "تحديث القياس",
+    "cancel": "إلغاء",
+    "saving": "جارٍ الحفظ...",
+    "saved": "تم الحفظ ✓",
+    "errorNoValues": "أدخل قيمة وحدة على الأقل قبل الحفظ",
+    "errorGeneric": "صار خطأ، حاول مرة ثانية"
+  },
+  "history": {
+    "title": "السجل",
+    "back": "← رجوع للداشبورد",
+    "filterFrom": "من تاريخ",
+    "filterTo": "إلى تاريخ",
+    "applyFilter": "تصفية",
+    "clearFilter": "مسح التصفية",
+    "noSessions": "ما فيه أي جلسات تمرين مسجلة بعد.",
+    "noSessionsInRange": "ما فيه جلسات بهذا النطاق الزمني.",
+    "setsLabel": "مجموعة",
+    "minutesLabel": "د"
+  },
+  "units": {
+    "kg": "كغم",
+    "lb": "باوند"
+  },
+  "loadErrorNotice": {
+    "title": "صار خطأ تقني",
+    "description": "ما قدرنا نجيب البيانات المطلوبة. جرب تحدّث الصفحة، ولو تكررت المشكلة تواصل مع الدعم.",
+    "back": "← رجوع للداشبورد"
+  },
+  "bottomNav": {
+    "home": "الرئيسية",
+    "history": "السجل",
+    "start": "ابدأ",
+    "progress": "التقدم",
+    "settings": "الإعدادات"
   }
 }

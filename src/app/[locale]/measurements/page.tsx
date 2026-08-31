@@ -1,30 +1,17 @@
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
-import MeasurementForm from '@/components/MeasurementForm';
+import MeasurementsManager, { type MeasurementRow } from '@/components/MeasurementsManager';
 import LoadErrorNotice from '@/components/LoadErrorNotice';
-import { kgToDisplayUnit, weightUnitLabel, type WeightUnit } from '@/lib/units';
+import type { WeightUnit } from '@/lib/units';
 
 type Props = {
   params: Promise<{ locale: string }>;
 };
 
-type MeasurementRow = {
-  id: string;
-  measurement_date: string;
-  weight_kg: number | null;
-  waist_cm: number | null;
-  chest_cm: number | null;
-  arm_cm: number | null;
-  thigh_cm: number | null;
-  hip_cm: number | null;
-  notes: string | null;
-};
-
-const FIELD_KEYS = ['weight_kg', 'waist_cm', 'chest_cm', 'arm_cm', 'thigh_cm', 'hip_cm'] as const;
-
 export default async function MeasurementsPage({ params }: Props) {
   const { locale } = await params;
-  const isArabic = locale === 'ar';
+  const t = await getTranslations({ locale, namespace: 'measurements' });
 
   const supabase = await createClient();
   const {
@@ -53,41 +40,6 @@ export default async function MeasurementsPage({ params }: Props) {
   const weightUnit = (profile?.preferred_weight_unit ?? 'kg') as WeightUnit;
   const measurements: MeasurementRow[] = rows ?? [];
 
-  const t = {
-    title: isArabic ? 'قياسات الجسم' : 'Body Measurements',
-    back: isArabic ? '← رجوع للداشبورد' : '← Back to dashboard',
-    addNew: isArabic ? 'إضافة قياس جديد' : 'Add new measurement',
-    history: isArabic ? 'السجل' : 'History',
-    noHistory: isArabic
-      ? 'لسا ما سجلت أي قياس. أضف أول قياس من فوق.'
-      : "You haven't logged any measurement yet. Add your first one above.",
-    labels: {
-      weight_kg: isArabic ? 'الوزن' : 'Weight',
-      waist_cm: isArabic ? 'الخصر' : 'Waist',
-      chest_cm: isArabic ? 'الصدر' : 'Chest',
-      arm_cm: isArabic ? 'الذراع' : 'Arm',
-      thigh_cm: isArabic ? 'الفخذ' : 'Thigh',
-      hip_cm: isArabic ? 'الورك' : 'Hip',
-    } as Record<(typeof FIELD_KEYS)[number], string>,
-    units: {
-      weight_kg: 'kg',
-      waist_cm: 'cm',
-      chest_cm: 'cm',
-      arm_cm: 'cm',
-      thigh_cm: 'cm',
-      hip_cm: 'cm',
-    } as Record<(typeof FIELD_KEYS)[number], string>,
-  };
-
-  function formatDate(dateStr: string) {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString(isArabic ? 'ar' : 'en', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    });
-  }
-
   return (
     <div
       style={{
@@ -103,91 +55,12 @@ export default async function MeasurementsPage({ params }: Props) {
         href={`/${locale}/dashboard`}
         style={{ color: '#A3A3A3', fontSize: '14px', textDecoration: 'none' }}
       >
-        {t.back}
+        {t('back')}
       </a>
 
-      <h1 style={{ fontSize: '24px', fontWeight: 700, margin: '10px 0 24px' }}>{t.title}</h1>
+      <h1 style={{ fontSize: '24px', fontWeight: 700, margin: '10px 0 24px' }}>{t('title')}</h1>
 
-      <div
-        style={{
-          backgroundColor: '#171717',
-          border: '1px solid #262626',
-          borderRadius: '12px',
-          padding: '20px',
-          marginBottom: '24px',
-        }}
-      >
-        <h2 style={{ margin: '0 0 16px', fontSize: '15px', fontWeight: 600 }}>{t.addNew}</h2>
-        <MeasurementForm locale={locale} weightUnit={weightUnit} />
-      </div>
-
-      <h2 style={{ fontSize: '15px', fontWeight: 600, margin: '0 0 12px' }}>{t.history}</h2>
-
-      {measurements.length === 0 ? (
-        <p style={{ color: '#A3A3A3', fontSize: '14px' }}>{t.noHistory}</p>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {measurements.map((m, index) => {
-            const previous = measurements[index + 1];
-            return (
-              <div
-                key={m.id}
-                style={{
-                  backgroundColor: '#171717',
-                  border: '1px solid #262626',
-                  borderRadius: '12px',
-                  padding: '16px 20px',
-                }}
-              >
-                <div style={{ fontSize: '13px', color: '#A3A3A3', marginBottom: '10px' }}>
-                  {formatDate(m.measurement_date)}
-                </div>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))',
-                    gap: '10px',
-                  }}
-                >
-                  {FIELD_KEYS.map((key) => {
-                    const rawValue = m[key];
-                    if (rawValue === null) return null;
-                    const rawPrevValue = previous ? previous[key] : null;
-
-                    const isWeight = key === 'weight_kg';
-                    const value = isWeight ? kgToDisplayUnit(rawValue, weightUnit) : rawValue;
-                    const prevValue =
-                      isWeight && rawPrevValue !== null && rawPrevValue !== undefined
-                        ? kgToDisplayUnit(rawPrevValue, weightUnit)
-                        : rawPrevValue;
-                    const unit = isWeight ? weightUnitLabel(weightUnit, isArabic) : t.units[key];
-                    const delta =
-                      prevValue !== null && prevValue !== undefined ? value - prevValue : null;
-                    return (
-                      <div key={key}>
-                        <div style={{ fontSize: '11px', color: '#737373' }}>{t.labels[key]}</div>
-                        <div style={{ fontSize: '15px', fontWeight: 700 }}>
-                          {value} {unit}
-                        </div>
-                        {delta !== null && delta !== 0 && (
-                          <div style={{ fontSize: '11px', color: '#A3A3A3' }}>
-                            {delta > 0 ? '▲' : '▼'} {Math.abs(delta).toFixed(1)}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-                {m.notes && (
-                  <p style={{ fontSize: '13px', color: '#D4D4D4', marginTop: '10px', marginBottom: 0 }}>
-                    {m.notes}
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+      <MeasurementsManager measurements={measurements} weightUnit={weightUnit} />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { getTranslations } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
 import SignOutButton from '@/components/SignOutButton';
 
@@ -46,6 +47,8 @@ export default async function DashboardPage({ params }: Props) {
   const { locale } = await params;
   const isArabic = locale === 'ar';
 
+  const t = await getTranslations({ locale, namespace: 'dashboard' });
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -63,9 +66,9 @@ export default async function DashboardPage({ params }: Props) {
 
   const gender = (profileRow?.gender ?? null) as 'male' | 'female' | null;
   const isFemale = gender === 'female';
+  const genderKey = isFemale ? 'female' : 'male';
 
-  const displayName =
-    user.email?.split('@')[0] ?? (isArabic ? (isFemale ? 'بطلة' : 'بطل') : 'Champion');
+  const displayName = user.email?.split('@')[0] ?? t('defaultName', { gender: genderKey });
 
   const { data: sessions } = await supabase
     .from('workout_sessions')
@@ -141,23 +144,21 @@ export default async function DashboardPage({ params }: Props) {
     if (latest.maxWeight > previousBest) {
       insights.push({
         type: 'pr',
-        message: isArabic
-          ? `🏆 رقم قياسي جديد بـ${name}! رفعت ${latest.maxWeight} كغم — أعلى وزن ليك بهذا التمرين`
-          : `🏆 New PR on ${name}! You lifted ${latest.maxWeight}kg — your all-time best`,
+        message: t('insightPr', { name, weight: latest.maxWeight }),
       });
     } else if (latest.maxWeight === previousSession.maxWeight && latest.reps <= previousSession.reps) {
       insights.push({
         type: 'plateau',
-        message: isArabic
-          ? `ركود بـ${name} — نفس الوزن (${latest.maxWeight} كغم) آخر مرتين. جرب تزيد الوزن أو التكرارات`
-          : `Plateau on ${name} — same weight (${latest.maxWeight}kg) for the last two sessions. Try adding weight or reps`,
+        message: t('insightPlateau', { name, weight: latest.maxWeight }),
       });
     } else if (latest.maxWeight > previousSession.maxWeight) {
       insights.push({
         type: 'progress',
-        message: isArabic
-          ? `تقدم! رفعت ${latest.maxWeight} كغم بـ${name} (كان ${previousSession.maxWeight} كغم آخر مرة)`
-          : `Progress! You lifted ${latest.maxWeight}kg on ${name} (up from ${previousSession.maxWeight}kg last time)`,
+        message: t('insightProgress', {
+          name,
+          weight: latest.maxWeight,
+          previousWeight: previousSession.maxWeight,
+        }),
       });
     }
   }
@@ -195,31 +196,7 @@ export default async function DashboardPage({ params }: Props) {
 
   const trainedCountLast28 = streakDays.filter((d) => d.trained).length;
 
-  const t = {
-    welcome: isArabic ? `أهلاً، ${displayName} 👋` : `Welcome, ${displayName} 👋`,
-    subtitle: isArabic
-      ? isFemale
-        ? 'جاهزة لتبدئي تمرين اليوم؟'
-        : 'جاهز لتبدأ تمرين اليوم؟'
-      : "Ready to start today's workout?",
-    startWorkout: isArabic ? 'ابدأ تمرين جديد' : 'Start New Workout',
-    recentSessions: isArabic ? 'آخر التمارين' : 'Recent Sessions',
-    noSessions: isArabic
-      ? 'لسا ما سجلت أي تمرين. ابدأ أول جلسة وراح تظهر هنا.'
-      : "You haven't logged a workout yet. Start your first session and it'll show up here.",
-    insights: isArabic ? 'التحليل الذكي' : 'Smart Insights',
-    insightsPlaceholder: isArabic
-      ? 'راح تظهر هنا ملاحظات (زي كشف الركود) بعد ما تسجل كم تمرين.'
-      : "Insights (like plateau detection) will appear here once you've logged a few workouts.",
-    signOut: isArabic ? 'تسجيل خروج' : 'Sign out',
-    setsLabel: isArabic ? 'سيت' : 'sets',
-    minutesLabel: isArabic ? 'د' : 'min',
-    noExerciseNames: '—',
-    viewFullHistory: isArabic ? 'عرض كل السجل →' : 'View full history →',
-    streakTitle: isArabic ? 'آخر 28 يوم' : 'Last 28 days',
-    streakCount: (n: number) =>
-      isArabic ? `تمرنت ${n} يوم من ${DAYS_BACK}` : `Trained ${n} of ${DAYS_BACK} days`,
-  };
+  const noExerciseNames = '—';
 
   function formatDate(dateStr: string) {
     const d = new Date(dateStr);
@@ -251,12 +228,16 @@ export default async function DashboardPage({ params }: Props) {
         <span style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '0.02em' }}>
           Gym Tracker
         </span>
-        <SignOutButton label={t.signOut} locale={locale} />
+        <SignOutButton label={t('signOut')} locale={locale} />
       </header>
 
       <section style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 700, margin: '0 0 6px' }}>{t.welcome}</h1>
-        <p style={{ color: '#A3A3A3', margin: 0, fontSize: '15px' }}>{t.subtitle}</p>
+        <h1 style={{ fontSize: '28px', fontWeight: 700, margin: '0 0 6px' }}>
+          {t('welcome', { name: displayName })}
+        </h1>
+        <p style={{ color: '#A3A3A3', margin: 0, fontSize: '15px' }}>
+          {t('subtitle', { gender: genderKey })}
+        </p>
       </section>
 
       <a
@@ -272,7 +253,7 @@ export default async function DashboardPage({ params }: Props) {
           marginBottom: '40px',
         }}
       >
-        {t.startWorkout}
+        {t('startWorkout')}
       </a>
 
       <div
@@ -293,10 +274,10 @@ export default async function DashboardPage({ params }: Props) {
           }}
         >
           <h2 style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#A3A3A3' }}>
-            {t.streakTitle}
+            {t('streakTitle')}
           </h2>
           <span style={{ fontSize: '12px', color: '#737373' }}>
-            {t.streakCount(trainedCountLast28)}
+            {t('streakCount', { n: trainedCountLast28, days: DAYS_BACK })}
           </span>
         </div>
         <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '2px' }}>
@@ -339,17 +320,17 @@ export default async function DashboardPage({ params }: Props) {
               marginBottom: '12px',
             }}
           >
-            <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>{t.recentSessions}</h2>
+            <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>{t('recentSessions')}</h2>
             <a
               href={`/${locale}/history`}
               style={{ color: '#C4F82A', fontSize: '12px', textDecoration: 'none' }}
             >
-              {t.viewFullHistory}
+              {t('viewFullHistory')}
             </a>
           </div>
           {sessionList.length === 0 ? (
             <p style={{ color: '#A3A3A3', fontSize: '14px', margin: 0, lineHeight: 1.6 }}>
-              {t.noSessions}
+              {t('noSessions')}
             </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -371,14 +352,14 @@ export default async function DashboardPage({ params }: Props) {
                     >
                       <span>{formatDate(s.date)}</span>
                       <span>
-                        {bucket?.count ?? 0} {t.setsLabel}
-                        {s.duration ? ` · ${s.duration} ${t.minutesLabel}` : ''}
+                        {bucket?.count ?? 0} {t('setsLabel')}
+                        {s.duration ? ` · ${s.duration} ${t('minutesLabel')}` : ''}
                       </span>
                     </div>
                     <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#D4D4D4' }}>
                       {exerciseNames.length > 0
                         ? exerciseNames.join(isArabic ? '، ' : ', ')
-                        : t.noExerciseNames}
+                        : noExerciseNames}
                     </p>
                   </div>
                 );
@@ -395,10 +376,10 @@ export default async function DashboardPage({ params }: Props) {
             padding: '20px',
           }}
         >
-          <h2 style={{ margin: '0 0 8px', fontSize: '15px', fontWeight: 600 }}>{t.insights}</h2>
+          <h2 style={{ margin: '0 0 8px', fontSize: '15px', fontWeight: 600 }}>{t('insights')}</h2>
           {topInsights.length === 0 ? (
             <p style={{ color: '#A3A3A3', fontSize: '14px', margin: 0, lineHeight: 1.6 }}>
-              {t.insightsPlaceholder}
+              {t('insightsPlaceholder')}
             </p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>

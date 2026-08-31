@@ -1,9 +1,11 @@
+import { getTranslations } from 'next-intl/server';
+
 type Props = {
   locale: string;
 };
 
-export default function LoadErrorNotice({ locale }: Props) {
-  const isArabic = locale === 'ar';
+export default async function LoadErrorNotice({ locale }: Props) {
+  const t = await getTranslations({ locale, namespace: 'loadErrorNotice' });
 
   return (
     <div
@@ -21,9 +23,7 @@ export default function LoadErrorNotice({ locale }: Props) {
       }}
     >
       <p style={{ fontSize: '32px', margin: '0 0 12px' }}>⚠️</p>
-      <p style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 8px' }}>
-        {isArabic ? 'صار خطأ تقني' : 'Something went wrong'}
-      </p>
+      <p style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 8px' }}>{t('title')}</p>
       <p
         style={{
           color: '#A3A3A3',
@@ -33,9 +33,7 @@ export default function LoadErrorNotice({ locale }: Props) {
           margin: '0 0 20px',
         }}
       >
-        {isArabic
-          ? 'ما قدرنا نجيب البيانات المطلوبة. جرب تحدّث الصفحة، ولو تكررت المشكلة تواصل مع الدعم.'
-          : "We couldn't load the required data. Try refreshing the page, and if the problem keeps happening, contact support."}
+        {t('description')}
       </p>
       <a
         href={`/${locale}/dashboard`}
@@ -48,7 +46,7 @@ export default function LoadErrorNotice({ locale }: Props) {
           padding: '10px 20px',
         }}
       >
-        {isArabic ? '← رجوع للداشبورد' : '← Back to dashboard'}
+        {t('back')}
       </a>
     </div>
   );

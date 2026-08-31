@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { saveProfileInfo } from '@/lib/actions/profile';
 import type { WeightUnit } from '@/lib/units';
 
 type Props = {
-  locale: string;
   initialGender: 'male' | 'female' | null;
   initialAge: number | null;
   initialWeightUnit: WeightUnit;
@@ -17,12 +17,11 @@ const CARD_BORDER = '#262626';
 const MUTED = '#737373';
 
 export default function GenderSettingsForm({
-  locale,
   initialGender,
   initialAge,
   initialWeightUnit,
 }: Props) {
-  const isArabic = locale === 'ar';
+  const t = useTranslations('genderSettingsForm');
   const router = useRouter();
   const [selectedGender, setSelectedGender] = useState<'male' | 'female' | null>(initialGender);
   const [ageInput, setAgeInput] = useState<string>(initialAge ? String(initialAge) : '');
@@ -30,20 +29,6 @@ export default function GenderSettingsForm({
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-
-  const t = {
-    male: isArabic ? 'ذكر' : 'Male',
-    female: isArabic ? 'أنثى' : 'Female',
-    ageLabel: isArabic ? 'العمر' : 'Age',
-    weightUnitLabel: isArabic ? 'وحدة الوزن' : 'Weight unit',
-    kg: isArabic ? 'كيلوغرام (كغم)' : 'Kilograms (kg)',
-    lb: isArabic ? 'باوند (lb)' : 'Pounds (lb)',
-    save: isArabic ? 'حفظ' : 'Save',
-    saving: isArabic ? 'جارٍ الحفظ...' : 'Saving...',
-    saved: isArabic ? 'تم الحفظ ✓' : 'Saved ✓',
-    errorAge: isArabic ? 'أدخل عمر صحيح بين 13 و100' : 'Enter a valid age between 13 and 100',
-    errorGeneric: isArabic ? 'صار خطأ، حاول مرة ثانية' : 'Something went wrong, try again',
-  };
 
   const canSave = selectedGender !== null;
 
@@ -54,7 +39,7 @@ export default function GenderSettingsForm({
     if (ageInput.trim() !== '') {
       const parsed = parseInt(ageInput, 10);
       if (Number.isNaN(parsed) || parsed < 13 || parsed > 100) {
-        setErrorMsg(t.errorAge);
+        setErrorMsg(t('errorAge'));
         return;
       }
       age = parsed;
@@ -73,7 +58,7 @@ export default function GenderSettingsForm({
       setSavedMsg(true);
       router.refresh();
     } else {
-      setErrorMsg(t.errorGeneric);
+      setErrorMsg(t('errorGeneric'));
     }
   }
 
@@ -96,7 +81,7 @@ export default function GenderSettingsForm({
               cursor: 'pointer',
             }}
           >
-            {g === 'male' ? t.male : t.female}
+            {g === 'male' ? t('male') : t('female')}
           </button>
         ))}
       </div>
@@ -110,7 +95,7 @@ export default function GenderSettingsForm({
             marginBottom: '6px',
           }}
         >
-          {t.ageLabel}
+          {t('ageLabel')}
         </label>
         <input
           type="number"
@@ -140,7 +125,7 @@ export default function GenderSettingsForm({
             marginBottom: '6px',
           }}
         >
-          {t.weightUnitLabel}
+          {t('weightUnitLabel')}
         </label>
         <div style={{ display: 'flex', gap: '10px' }}>
           {(['kg', 'lb'] as const).map((u) => (
@@ -159,7 +144,7 @@ export default function GenderSettingsForm({
                 cursor: 'pointer',
               }}
             >
-              {u === 'kg' ? t.kg : t.lb}
+              {u === 'kg' ? t('kg') : t('lb')}
             </button>
           ))}
         </div>
@@ -183,7 +168,7 @@ export default function GenderSettingsForm({
           cursor: canSave ? 'pointer' : 'not-allowed',
         }}
       >
-        {saving ? t.saving : savedMsg ? t.saved : t.save}
+        {saving ? t('saving') : savedMsg ? t('saved') : t('save')}
       </button>
     </div>
   );

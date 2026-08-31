@@ -2,12 +2,26 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { saveMeasurement } from '@/lib/actions/measurements';
-import { displayUnitToKg, weightUnitLabel, type WeightUnit } from '@/lib/units';
+import { useTranslations } from 'next-intl';
+import { saveMeasurement, updateMeasurement } from '@/lib/actions/measurements';
+import { displayUnitToKg, kgToDisplayUnit, type WeightUnit } from '@/lib/units';
+
+export type EditingMeasurement = {
+  id: string;
+  measurementDate: string;
+  weightKg: number | null;
+  waistCm: number | null;
+  chestCm: number | null;
+  armCm: number | null;
+  thighCm: number | null;
+  hipCm: number | null;
+  notes: string | null;
+};
 
 type Props = {
-  locale: string;
   weightUnit: WeightUnit;
+  editing?: EditingMeasurement | null;
+  onSaved?: () => void;
 };
 
 const ACCENT = '#C4F82A';
@@ -23,51 +37,43 @@ function toLocalDateStr(d: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-export default function MeasurementForm({ locale, weightUnit }: Props) {
-  const isArabic = locale === 'ar';
-  const router = useRouter();
-  const unitLabel = weightUnitLabel(weightUnit, isArabic);
+function numOrEmpty(value: number | null): string {
+  return value === null ? '' : String(value);
+}
 
-  const today = toLocalDateStr(new Date());
-  const [date, setDate] = useState(today);
-  const [values, setValues] = useState<Record<FieldKey, string>>({
-    weight: '',
-    waist: '',
-    chest: '',
-    arm: '',
-    thigh: '',
-    hip: '',
-  });
-  const [notes, setNotes] = useState('');
+export default function MeasurementForm({ weightUnit, editing, onSaved }: Props) {
+  const t = useTranslations('measurementForm');
+  const tUnits = useTranslations('units');
+  const router = useRouter();
+  const unitLabel = tUnits(weightUnit);
+
+  const [date, setDate] = useState(() => editing?.measurementDate ?? toLocalDateStr(new Date()));
+  const [values, setValues] = useState<Record<FieldKey, string>>(() =>
+    editing
+      ? {
+          weight: numOrEmpty(
+            editing.weightKg !== null ? kgToDisplayUnit(editing.weightKg, weightUnit) : null
+          ),
+          waist: numOrEmpty(editing.waistCm),
+          chest: numOrEmpty(editing.chestCm),
+          arm: numOrEmpty(editing.armCm),
+          thigh: numOrEmpty(editing.thighCm),
+          hip: numOrEmpty(editing.hipCm),
+        }
+      : { weight: '', waist: '', chest: '', arm: '', thigh: '', hip: '' }
+  );
+  const [notes, setNotes] = useState(editing?.notes ?? '');
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [savedMsg, setSavedMsg] = useState(false);
 
-  const t = {
-    date: isArabic ? 'التاريخ' : 'Date',
-    weight: isArabic ? `الوزن (${unitLabel})` : `Weight (${unitLabel})`,
-    waist: isArabic ? 'الخصر (سم)' : 'Waist (cm)',
-    chest: isArabic ? 'الصدر (سم)' : 'Chest (cm)',
-    arm: isArabic ? 'الذراع (سم)' : 'Arm (cm)',
-    thigh: isArabic ? 'الفخذ (سم)' : 'Thigh (cm)',
-    hip: isArabic ? 'الورك (سم)' : 'Hip (cm)',
-    notes: isArabic ? 'ملاحظات (اختياري)' : 'Notes (optional)',
-    save: isArabic ? 'حفظ القياس' : 'Save measurement',
-    saving: isArabic ? 'جارٍ الحفظ...' : 'Saving...',
-    saved: isArabic ? 'تم الحفظ ✓' : 'Saved ✓',
-    errorNoValues: isArabic
-      ? 'أدخل قيمة وحدة على الأقل قبل الحفظ'
-      : 'Enter at least one value before saving',
-    errorGeneric: isArabic ? 'صار خطأ، حاول مرة ثانية' : 'Something went wrong, try again',
-  };
-
   const fields: { key: FieldKey; label: string }[] = [
-    { key: 'weight', label: t.weight },
-    { key: 'waist', label: t.waist },
-    { key: 'chest', label: t.chest },
-    { key: 'arm', label: t.arm },
-    { key: 'thigh', label: t.thigh },
-    { key: 'hip', label: t.hip },
+    { key: 'weight', label: t('weight', { unit: unitLabel }) },
+    { key: 'waist', label: t('waist') },
+    { key: 'chest', label: t('chest') },
+    { key: 'arm', label: t('arm') },
+    { key: 'thigh', label: t('thigh') },
+    { key: 'hip', label: t('hip') },
   ];
 
   function updateField(key: FieldKey, value: string) {
@@ -83,7 +89,7 @@ export default function MeasurementForm({ locale, weightUnit }: Props) {
   async function handleSave() {
     const hasAnyValue = Object.values(values).some((v) => v.trim() !== '');
     if (!hasAnyValue) {
-      setErrorMsg(t.errorNoValues);
+      setErrorMsg(t('errorNoValues'));
       return;
     }
 
@@ -93,7 +99,7 @@ export default function MeasurementForm({ locale, weightUnit }: Props) {
 
     const enteredWeight = parseOrNull(values.weight);
 
-    const result = await saveMeasurement({
+    const input = {
       measurementDate: date,
       weightKg: enteredWeight !== null ? displayUnitToKg(enteredWeight, weightUnit) : null,
       waistCm: parseOrNull(values.waist),
@@ -102,17 +108,25 @@ export default function MeasurementForm({ locale, weightUnit }: Props) {
       thighCm: parseOrNull(values.thigh),
       hipCm: parseOrNull(values.hip),
       notes: notes.trim() || null,
-    });
+    };
+
+    const result = editing
+      ? await updateMeasurement(editing.id, input)
+      : await saveMeasurement(input);
 
     setSaving(false);
 
     if (result.success) {
       setSavedMsg(true);
-      setValues({ weight: '', waist: '', chest: '', arm: '', thigh: '', hip: '' });
-      setNotes('');
       router.refresh();
+      if (editing) {
+        onSaved?.();
+      } else {
+        setValues({ weight: '', waist: '', chest: '', arm: '', thigh: '', hip: '' });
+        setNotes('');
+      }
     } else {
-      setErrorMsg(t.errorGeneric);
+      setErrorMsg(t('errorGeneric'));
     }
   }
 
@@ -120,7 +134,7 @@ export default function MeasurementForm({ locale, weightUnit }: Props) {
     <div>
       <div style={{ marginBottom: '14px' }}>
         <label style={{ display: 'block', fontSize: '13px', color: MUTED, marginBottom: '6px' }}>
-          {t.date}
+          {t('date')}
         </label>
         <input
           type="date"
@@ -130,6 +144,7 @@ export default function MeasurementForm({ locale, weightUnit }: Props) {
             width: '100%',
             backgroundColor: '#0A0A0A',
             color: '#FFFFFF',
+            colorScheme: 'dark',
             border: `1px solid ${CARD_BORDER}`,
             borderRadius: '8px',
             padding: '10px 12px',
@@ -173,7 +188,7 @@ export default function MeasurementForm({ locale, weightUnit }: Props) {
 
       <div style={{ marginBottom: '16px' }}>
         <label style={{ display: 'block', fontSize: '13px', color: MUTED, marginBottom: '6px' }}>
-          {t.notes}
+          {t('notes')}
         </label>
         <input
           type="text"
@@ -195,23 +210,40 @@ export default function MeasurementForm({ locale, weightUnit }: Props) {
         <p style={{ color: '#F87171', fontSize: '13px', margin: '0 0 12px' }}>{errorMsg}</p>
       )}
 
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        style={{
-          backgroundColor: ACCENT,
-          color: '#0A0A0A',
-          fontWeight: 700,
-          border: 'none',
-          borderRadius: '10px',
-          padding: '12px 28px',
-          fontSize: '14px',
-          cursor: saving ? 'not-allowed' : 'pointer',
-          opacity: saving ? 0.7 : 1,
-        }}
-      >
-        {saving ? t.saving : savedMsg ? t.saved : t.save}
-      </button>
+      <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          style={{
+            backgroundColor: ACCENT,
+            color: '#0A0A0A',
+            fontWeight: 700,
+            border: 'none',
+            borderRadius: '10px',
+            padding: '12px 28px',
+            fontSize: '14px',
+            cursor: saving ? 'not-allowed' : 'pointer',
+            opacity: saving ? 0.7 : 1,
+          }}
+        >
+          {saving ? t('saving') : savedMsg ? t('saved') : editing ? t('update') : t('save')}
+        </button>
+        {editing && (
+          <button
+            onClick={() => onSaved?.()}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: MUTED,
+              fontSize: '13px',
+              cursor: 'pointer',
+              padding: 0,
+            }}
+          >
+            {t('cancel')}
+          </button>
+        )}
+      </div>
     </div>
   );
 }

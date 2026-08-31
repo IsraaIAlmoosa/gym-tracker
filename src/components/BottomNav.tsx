@@ -1,7 +1,7 @@
 'use client';
 
 import { Link, usePathname } from '@/i18n/navigation';
-import { useLocale } from 'next-intl';
+import { useTranslations } from 'next-intl';
 
 const ACTIVE_COLOR = '#C4F82A';
 const INACTIVE_COLOR = '#737373';
@@ -102,8 +102,7 @@ function PlusCircleIcon({ color, filled }: { color: string; filled: boolean }) {
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const locale = useLocale();
-  const isArabic = locale === 'ar';
+  const t = useTranslations('bottomNav');
 
   if (pathname.startsWith('/login') || pathname.startsWith('/auth')) {
     return null;
@@ -114,14 +113,6 @@ export default function BottomNav() {
   const isWorkout = pathname.startsWith('/workouts');
   const isProgress = pathname.startsWith('/measurements');
   const isSettings = pathname.startsWith('/settings');
-
-  const t = {
-    home: isArabic ? 'الرئيسية' : 'Home',
-    history: isArabic ? 'السجل' : 'History',
-    start: isArabic ? 'ابدأ' : 'Start',
-    progress: isArabic ? 'التقدم' : 'Progress',
-    settings: isArabic ? 'الإعدادات' : 'Settings',
-  };
 
   return (
     <nav
@@ -154,7 +145,7 @@ export default function BottomNav() {
         }}
       >
         <HomeIcon color={isHome ? ACTIVE_COLOR : INACTIVE_COLOR} />
-        {t.home}
+        {t('home')}
       </Link>
 
       <Link
@@ -171,7 +162,7 @@ export default function BottomNav() {
         }}
       >
         <HistoryIcon color={isHistory ? ACTIVE_COLOR : INACTIVE_COLOR} />
-        {t.history}
+        {t('history')}
       </Link>
 
       <Link
@@ -188,7 +179,7 @@ export default function BottomNav() {
         }}
       >
         <PlusCircleIcon color={isWorkout ? ACTIVE_COLOR : INACTIVE_COLOR} filled={isWorkout} />
-        {t.start}
+        {t('start')}
       </Link>
 
       <Link
@@ -205,7 +196,7 @@ export default function BottomNav() {
         }}
       >
         <ProgressIcon color={isProgress ? ACTIVE_COLOR : INACTIVE_COLOR} />
-        {t.progress}
+        {t('progress')}
       </Link>
 
       <Link
@@ -222,7 +213,7 @@ export default function BottomNav() {
         }}
       >
         <SettingsIcon color={isSettings ? ACTIVE_COLOR : INACTIVE_COLOR} />
-        {t.settings}
+        {t('settings')}
       </Link>
     </nav>
   );

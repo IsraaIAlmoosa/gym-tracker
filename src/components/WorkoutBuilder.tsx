@@ -2,9 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { saveWorkout } from '@/lib/actions/workouts';
+import { saveRoutineFromSession } from '@/lib/actions/routines';
 import { CategoryIcon, getExerciseCategory, getOrderedCategories, type CategorySlug } from '@/lib/categories';
-import { displayUnitToKg, kgToDisplayUnit, weightUnitLabel, type WeightUnit } from '@/lib/units';
+import { displayUnitToKg, kgToDisplayUnit, type WeightUnit } from '@/lib/units';
 
 type Exercise = {
   id: string;
@@ -31,6 +33,12 @@ type SessionExercise = {
   draftReps: string;
 };
 
+type RoutineOption = {
+  id: string;
+  name: string;
+  exerciseIds: string[];
+};
+
 type Props = {
   locale: string;
   exercises: Exercise[];
@@ -38,6 +46,8 @@ type Props = {
   gender: 'male' | 'female' | null;
   age: number | null;
   weightUnit: WeightUnit;
+  routines: RoutineOption[];
+  lastSetByExercise: Record<string, { weight: number; reps: number }>;
 };
 
 const OLDER_AGE_THRESHOLD = 45;
@@ -62,13 +72,17 @@ export default function WorkoutBuilder({
   gender,
   age,
   weightUnit,
+  routines,
+  lastSetByExercise,
 }: Props) {
   const isArabic = locale === 'ar';
+  const t = useTranslations('workoutBuilder');
+  const tUnits = useTranslations('units');
   const router = useRouter();
   const startTimeRef = useRef<number>(Date.now());
   const orderedCategories = getOrderedCategories(gender);
   const preferLowerImpactFirst = age !== null && age >= OLDER_AGE_THRESHOLD;
-  const unitLabel = weightUnitLabel(weightUnit, isArabic);
+  const unitLabel = tUnits(weightUnit);
 
   const [sessionExercises, setSessionExercises] = useState<SessionExercise[]>([]);
   const [activeCategory, setActiveCategory] = useState<CategorySlug | null>(null);
@@ -76,6 +90,10 @@ export default function WorkoutBuilder({
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showSaveRoutineForm, setShowSaveRoutineForm] = useState(false);
+  const [routineNameInput, setRoutineNameInput] = useState('');
+  const [savingRoutine, setSavingRoutine] = useState(false);
+  const [routineSaveMsg, setRoutineSaveMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (restSeconds === null) return;
@@ -89,45 +107,10 @@ export default function WorkoutBuilder({
     return () => clearTimeout(timeout);
   }, [restSeconds]);
 
-  const t = {
-    title: isArabic ? 'تسجيل تمرين جديد' : 'New Workout',
-    back: isArabic ? '← رجوع للداشبورد' : '← Back to dashboard',
-    backToCategories: isArabic ? '← كل المجموعات' : '← All categories',
-    pickCategory: isArabic ? 'اختر مجموعة عضلية' : 'Choose a muscle group',
-    hiddenNote: (n: number) =>
-      isArabic
-        ? `تم إخفاء ${n} تمرين بسبب إعدادات المناطق المتجنبة`
-        : `${n} exercise${n === 1 ? '' : 's'} hidden based on your avoided-areas settings`,
-    noExercisesAdded: isArabic
-      ? 'ما ضفت أي تمرين للجلسة بعد. اختر مجموعة عضلية من فوق وابدأ.'
-      : "You haven't added any exercise yet. Pick a muscle group above to start.",
-    noExercisesInCategory: isArabic
-      ? 'كل تمارين هذي المجموعة مضافة بالفعل'
-      : 'All exercises in this group are already added',
-    searchPlaceholder: isArabic ? 'ابحث عن تمرين...' : 'Search exercises...',
-    noSearchResults: isArabic ? 'ما فيه نتائج مطابقة' : 'No matching exercises',
-    weight: isArabic ? `الوزن (${unitLabel})` : `Weight (${unitLabel})`,
-    reps: isArabic ? 'التكرارات' : 'Reps',
-    addSet: isArabic ? 'إضافة سيت' : 'Add set',
-    setLabel: isArabic ? 'سيت' : 'Set',
-    noSetsYet: isArabic ? 'لسا ما سجلت أي سيت لهذا التمرين' : 'No sets logged for this exercise yet',
-    remove: isArabic ? 'إزالة' : 'Remove',
-    restTitle: isArabic ? 'وقت الراحة' : 'Rest time',
-    skipRest: isArabic ? 'تخطي' : 'Skip',
-    save: isArabic ? 'حفظ التمرين' : 'Save workout',
-    saving: isArabic ? 'جارٍ الحفظ...' : 'Saving...',
-    errorNoSets: isArabic
-      ? 'سجل سيت وحد على الأقل قبل الحفظ'
-      : 'Log at least one set before saving',
-    errorGeneric: isArabic
-      ? 'صار خطأ أثناء الحفظ، حاول مرة ثانية'
-      : 'Something went wrong while saving, please try again',
-    impact: {
-      1: isArabic ? 'خفيف' : 'Low',
-      2: isArabic ? 'متوسط' : 'Medium',
-      3: isArabic ? 'عالي' : 'High',
-    } as Record<number, string>,
-  };
+  const IMPACT_KEY: Record<number, 'low' | 'medium' | 'high'> = { 1: 'low', 2: 'medium', 3: 'high' };
+  function impactLabelFor(level: number) {
+    return t(`impact.${IMPACT_KEY[level] ?? 'medium'}`);
+  }
 
   const addedIds = new Set(sessionExercises.map((se) => se.exercise.id));
   const pickableExercises = exercises.filter((ex) => !addedIds.has(ex.id));
@@ -157,7 +140,7 @@ export default function WorkoutBuilder({
 
   function renderExerciseRow(ex: Exercise) {
     const impactColor = ex.impact_level ? IMPACT_COLOR[ex.impact_level] : MUTED;
-    const impactLabel = ex.impact_level ? t.impact[ex.impact_level] : null;
+    const impactLabel = ex.impact_level ? impactLabelFor(ex.impact_level) : null;
     const equipmentLabel = isArabic ? ex.equipment_ar : ex.equipment_en;
     return (
       <button
@@ -208,10 +191,42 @@ export default function WorkoutBuilder({
   function addExerciseById(id: string) {
     const exercise = exercises.find((ex) => ex.id === id);
     if (!exercise) return;
-    setSessionExercises((prev) => [
-      ...prev,
-      { exercise, sets: [], draftWeight: '', draftReps: '' },
-    ]);
+    const last = lastSetByExercise[id];
+    const draftWeight = last ? String(kgToDisplayUnit(last.weight, weightUnit)) : '';
+    const draftReps = last ? String(last.reps) : '';
+    setSessionExercises((prev) => [...prev, { exercise, sets: [], draftWeight, draftReps }]);
+  }
+
+  function startFromRoutine(routine: RoutineOption) {
+    const alreadyAddedIds = new Set(sessionExercises.map((se) => se.exercise.id));
+    for (const exerciseId of routine.exerciseIds) {
+      if (alreadyAddedIds.has(exerciseId)) continue;
+      addExerciseById(exerciseId);
+    }
+  }
+
+  async function handleSaveRoutine() {
+    const name = routineNameInput.trim();
+    if (!name || sessionExercises.length === 0) return;
+
+    setSavingRoutine(true);
+    setRoutineSaveMsg(null);
+
+    const result = await saveRoutineFromSession({
+      name,
+      exerciseIds: sessionExercises.map((se) => se.exercise.id),
+    });
+
+    setSavingRoutine(false);
+
+    if (result.success) {
+      setRoutineSaveMsg(t('routineSaved'));
+      setShowSaveRoutineForm(false);
+      setRoutineNameInput('');
+      router.refresh();
+    } else {
+      setRoutineSaveMsg(t('routineSaveError'));
+    }
   }
 
   function updateDraft(index: number, field: 'draftWeight' | 'draftReps', value: string) {
@@ -258,7 +273,7 @@ export default function WorkoutBuilder({
     );
 
     if (flatSets.length === 0) {
-      setErrorMsg(t.errorNoSets);
+      setErrorMsg(t('errorNoSets'));
       return;
     }
 
@@ -274,7 +289,7 @@ export default function WorkoutBuilder({
 
     if (!result.success) {
       setSaving(false);
-      setErrorMsg(t.errorGeneric);
+      setErrorMsg(t('errorGeneric'));
       return;
     }
 
@@ -312,7 +327,7 @@ export default function WorkoutBuilder({
           }}
         >
           <span style={{ fontWeight: 700 }}>
-            {t.restTitle}: {restSeconds}s
+            {t('restTitle')}: {restSeconds}s
           </span>
           <button
             onClick={() => setRestSeconds(null)}
@@ -326,7 +341,7 @@ export default function WorkoutBuilder({
               cursor: 'pointer',
             }}
           >
-            {t.skipRest}
+            {t('skipRest')}
           </button>
         </div>
       )}
@@ -335,15 +350,43 @@ export default function WorkoutBuilder({
         href={`/${locale}/dashboard`}
         style={{ color: MUTED, fontSize: '14px', textDecoration: 'none' }}
       >
-        {t.back}
+        {t('back')}
       </a>
 
-      <h1 style={{ fontSize: '24px', fontWeight: 700, margin: '10px 0 20px' }}>{t.title}</h1>
+      <h1 style={{ fontSize: '24px', fontWeight: 700, margin: '10px 0 20px' }}>{t('title')}</h1>
 
       {hiddenCount > 0 && (
         <p style={{ color: '#FBBF24', fontSize: '13px', marginBottom: '20px' }}>
-          {t.hiddenNote(hiddenCount)}
+          {t('hiddenNote', { n: hiddenCount })}
         </p>
+      )}
+
+      {routines.length > 0 && (
+        <div style={{ marginBottom: '20px' }}>
+          <h2 style={{ fontSize: '14px', fontWeight: 600, color: MUTED, margin: '0 0 12px' }}>
+            {t('startFromRoutine')}
+          </h2>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {routines.map((routine) => (
+              <button
+                key={routine.id}
+                onClick={() => startFromRoutine(routine)}
+                style={{
+                  backgroundColor: CARD_BG,
+                  border: `1px solid ${CARD_BORDER}`,
+                  borderRadius: '10px',
+                  padding: '10px 16px',
+                  color: '#FFFFFF',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {routine.name}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
       <div style={{ marginBottom: '28px' }}>
@@ -351,7 +394,7 @@ export default function WorkoutBuilder({
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={t.searchPlaceholder}
+          placeholder={t('searchPlaceholder')}
           style={{
             width: '100%',
             backgroundColor: CARD_BG,
@@ -366,7 +409,7 @@ export default function WorkoutBuilder({
 
         {trimmedQuery ? (
           searchResults.length === 0 ? (
-            <p style={{ color: MUTED, fontSize: '14px' }}>{t.noSearchResults}</p>
+            <p style={{ color: MUTED, fontSize: '14px' }}>{t('noSearchResults')}</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {searchResults.map((ex) => renderExerciseRow(ex))}
@@ -375,7 +418,7 @@ export default function WorkoutBuilder({
         ) : activeCategory === null ? (
           <>
             <h2 style={{ fontSize: '14px', fontWeight: 600, color: MUTED, margin: '0 0 12px' }}>
-              {t.pickCategory}
+              {t('pickCategory')}
             </h2>
             <div
               style={{
@@ -435,11 +478,11 @@ export default function WorkoutBuilder({
                 marginBottom: '14px',
               }}
             >
-              {t.backToCategories}
+              {t('backToCategories')}
             </button>
 
             {exercisesInActiveCategory.length === 0 ? (
-              <p style={{ color: MUTED, fontSize: '14px' }}>{t.noExercisesInCategory}</p>
+              <p style={{ color: MUTED, fontSize: '14px' }}>{t('noExercisesInCategory')}</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {exercisesInActiveCategory.map((ex) => renderExerciseRow(ex))}
@@ -450,7 +493,7 @@ export default function WorkoutBuilder({
       </div>
 
       {sessionExercises.length === 0 && (
-        <p style={{ color: '#A3A3A3', fontSize: '14px' }}>{t.noExercisesAdded}</p>
+        <p style={{ color: '#A3A3A3', fontSize: '14px' }}>{t('noExercisesAdded')}</p>
       )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -459,7 +502,7 @@ export default function WorkoutBuilder({
             ? IMPACT_COLOR[se.exercise.impact_level]
             : MUTED;
           const impactLabel = se.exercise.impact_level
-            ? t.impact[se.exercise.impact_level]
+            ? impactLabelFor(se.exercise.impact_level)
             : null;
 
           return (
@@ -501,12 +544,12 @@ export default function WorkoutBuilder({
                     cursor: 'pointer',
                   }}
                 >
-                  {t.remove}
+                  {t('remove')}
                 </button>
               </div>
 
               {se.sets.length === 0 ? (
-                <p style={{ color: MUTED, fontSize: '13px', margin: '10px 0' }}>{t.noSetsYet}</p>
+                <p style={{ color: MUTED, fontSize: '13px', margin: '10px 0' }}>{t('noSetsYet')}</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', margin: '10px 0' }}>
                   {se.sets.map((s) => (
@@ -520,7 +563,7 @@ export default function WorkoutBuilder({
                       }}
                     >
                       <span style={{ color: MUTED, width: '48px' }}>
-                        {t.setLabel} {s.setNumber}
+                        {t('setNumberLabel', { n: s.setNumber })}
                       </span>
                       <span>
                         {kgToDisplayUnit(s.weight, weightUnit)} {unitLabel}
@@ -535,7 +578,7 @@ export default function WorkoutBuilder({
                 <input
                   type="number"
                   inputMode="decimal"
-                  placeholder={t.weight}
+                  placeholder={t('weight', { unit: unitLabel })}
                   value={se.draftWeight}
                   onChange={(e) => updateDraft(index, 'draftWeight', e.target.value)}
                   style={{
@@ -551,7 +594,7 @@ export default function WorkoutBuilder({
                 <input
                   type="number"
                   inputMode="numeric"
-                  placeholder={t.reps}
+                  placeholder={t('reps')}
                   value={se.draftReps}
                   onChange={(e) => updateDraft(index, 'draftReps', e.target.value)}
                   style={{
@@ -576,13 +619,97 @@ export default function WorkoutBuilder({
                     cursor: 'pointer',
                   }}
                 >
-                  {t.addSet}
+                  {t('addSet')}
                 </button>
               </div>
             </div>
           );
         })}
       </div>
+
+      {sessionExercises.length > 0 && (
+        <div style={{ marginTop: '16px' }}>
+          {showSaveRoutineForm ? (
+            <div
+              style={{
+                backgroundColor: CARD_BG,
+                border: `1px solid ${CARD_BORDER}`,
+                borderRadius: '10px',
+                padding: '14px',
+                display: 'flex',
+                gap: '8px',
+                flexWrap: 'wrap',
+              }}
+            >
+              <input
+                type="text"
+                value={routineNameInput}
+                onChange={(e) => setRoutineNameInput(e.target.value)}
+                placeholder={t('routineNamePlaceholder')}
+                style={{
+                  flex: '1 1 160px',
+                  backgroundColor: '#0A0A0A',
+                  color: '#FFFFFF',
+                  border: `1px solid ${CARD_BORDER}`,
+                  borderRadius: '8px',
+                  padding: '8px 10px',
+                  fontSize: '14px',
+                }}
+              />
+              <button
+                onClick={handleSaveRoutine}
+                disabled={savingRoutine || !routineNameInput.trim()}
+                style={{
+                  backgroundColor: ACCENT,
+                  color: '#0A0A0A',
+                  fontWeight: 700,
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '8px 16px',
+                  fontSize: '13px',
+                  cursor: savingRoutine ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {savingRoutine ? t('savingRoutine') : t('saveRoutine')}
+              </button>
+              <button
+                onClick={() => {
+                  setShowSaveRoutineForm(false);
+                  setRoutineNameInput('');
+                }}
+                style={{
+                  backgroundColor: 'transparent',
+                  color: MUTED,
+                  border: 'none',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                }}
+              >
+                {t('cancel')}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowSaveRoutineForm(true)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: ACCENT,
+                fontSize: '13px',
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              {t('saveAsRoutine')}
+            </button>
+          )}
+          {routineSaveMsg && (
+            <p style={{ color: '#A3A3A3', fontSize: '13px', margin: '8px 0 0' }}>
+              {routineSaveMsg}
+            </p>
+          )}
+        </div>
+      )}
 
       <div
         style={{
@@ -603,8 +730,7 @@ export default function WorkoutBuilder({
             <p style={{ color: '#F87171', fontSize: '13px', margin: 0 }}>{errorMsg}</p>
           )}
           <p style={{ color: '#A3A3A3', fontSize: '13px', margin: 0 }}>
-            {totalSets} {t.setLabel}
-            {isArabic ? '' : totalSets === 1 ? '' : 's'}
+            {t('totalSetsCount', { n: totalSets })}
           </p>
         </div>
         <button
@@ -622,7 +748,7 @@ export default function WorkoutBuilder({
             opacity: saving ? 0.7 : 1,
           }}
         >
-          {saving ? t.saving : t.save}
+          {saving ? t('saving') : t('save')}
         </button>
       </div>
     </div>
