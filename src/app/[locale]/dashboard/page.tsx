@@ -21,6 +21,27 @@ type SetRow = {
   exercises: ExerciseNameRow | ExerciseNameRow[] | null;
 };
 
+type SetWithSessionDate = {
+  exercise_id: string;
+  weight: number;
+  reps: number;
+  session_id: string;
+  workout_sessions: { date: string } | { date: string }[] | null;
+  exercises: ExerciseNameRow | ExerciseNameRow[] | null;
+};
+
+type Insight = {
+  type: 'plateau' | 'progress' | 'pr';
+  message: string;
+};
+
+function toLocalDateStr(d: Date): string {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 export default async function DashboardPage({ params }: Props) {
   const { locale } = await params;
   const isArabic = locale === 'ar';
@@ -34,7 +55,17 @@ export default async function DashboardPage({ params }: Props) {
     redirect(`/${locale}/login`);
   }
 
-  const displayName = user.email?.split('@')[0] ?? (isArabic ? 'بطل' : 'Champion');
+  const { data: profileRow } = await supabase
+    .from('profiles')
+    .select('gender')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  const gender = (profileRow?.gender ?? null) as 'male' | 'female' | null;
+  const isFemale = gender === 'female';
+
+  const displayName =
+    user.email?.split('@')[0] ?? (isArabic ? (isFemale ? 'بطلة' : 'بطل') : 'Champion');
 
   const { data: sessions } = await supabase
     .from('workout_sessions')
@@ -67,9 +98,110 @@ export default async function DashboardPage({ params }: Props) {
     }
   }
 
+  // ---------- التحليل الذكي: كشف ركود / تقدم / رقم قياسي لكل تمرين ----------
+  const { data: allSets } = await supabase
+    .from('workout_sets')
+    .select('exercise_id, weight, reps, session_id, workout_sessions(date), exercises(name_ar, name_en)');
+
+  type SessionBest = { date: string; maxWeight: number; reps: number };
+  const byExercise: Record<string, { name: string; sessions: Map<string, SessionBest> }> = {};
+
+  for (const row of (allSets ?? []) as unknown as SetWithSessionDate[]) {
+    const session = Array.isArray(row.workout_sessions)
+      ? row.workout_sessions[0]
+      : row.workout_sessions;
+    const ex = Array.isArray(row.exercises) ? row.exercises[0] : row.exercises;
+    if (!session || !ex) continue;
+
+    const name = isArabic ? ex.name_ar : ex.name_en;
+    if (!byExercise[row.exercise_id]) {
+      byExercise[row.exercise_id] = { name, sessions: new Map() };
+    }
+    const bucket = byExercise[row.exercise_id];
+    const existing = bucket.sessions.get(row.session_id);
+    if (!existing || row.weight > existing.maxWeight) {
+      bucket.sessions.set(row.session_id, {
+        date: session.date,
+        maxWeight: row.weight,
+        reps: row.reps,
+      });
+    }
+  }
+
+  const insights: Insight[] = [];
+
+  for (const exId in byExercise) {
+    const { name, sessions } = byExercise[exId];
+    const sorted = Array.from(sessions.values()).sort((a, b) => (a.date < b.date ? 1 : -1));
+    if (sorted.length < 2) continue;
+    const [latest, ...history] = sorted;
+    const previousBest = Math.max(...history.map((h) => h.maxWeight));
+    const previousSession = history[0];
+
+    if (latest.maxWeight > previousBest) {
+      insights.push({
+        type: 'pr',
+        message: isArabic
+          ? `🏆 رقم قياسي جديد بـ${name}! رفعت ${latest.maxWeight} كغم — أعلى وزن ليك بهذا التمرين`
+          : `🏆 New PR on ${name}! You lifted ${latest.maxWeight}kg — your all-time best`,
+      });
+    } else if (latest.maxWeight === previousSession.maxWeight && latest.reps <= previousSession.reps) {
+      insights.push({
+        type: 'plateau',
+        message: isArabic
+          ? `ركود بـ${name} — نفس الوزن (${latest.maxWeight} كغم) آخر مرتين. جرب تزيد الوزن أو التكرارات`
+          : `Plateau on ${name} — same weight (${latest.maxWeight}kg) for the last two sessions. Try adding weight or reps`,
+      });
+    } else if (latest.maxWeight > previousSession.maxWeight) {
+      insights.push({
+        type: 'progress',
+        message: isArabic
+          ? `تقدم! رفعت ${latest.maxWeight} كغم بـ${name} (كان ${previousSession.maxWeight} كغم آخر مرة)`
+          : `Progress! You lifted ${latest.maxWeight}kg on ${name} (up from ${previousSession.maxWeight}kg last time)`,
+      });
+    }
+  }
+
+  const insightOrder: Record<Insight['type'], number> = { pr: 0, plateau: 1, progress: 2 };
+  const topInsights = insights.sort((a, b) => insightOrder[a.type] - insightOrder[b.type]).slice(0, 3);
+
+  // ---------- سلسلة أيام التمرين: آخر 28 يوم ----------
+  const DAYS_BACK = 28;
+  const todayMidnight = new Date();
+  todayMidnight.setHours(0, 0, 0, 0);
+
+  const rangeStart = new Date(todayMidnight);
+  rangeStart.setDate(rangeStart.getDate() - (DAYS_BACK - 1));
+  const rangeStartStr = toLocalDateStr(rangeStart);
+
+  const { data: recentDatesRaw } = await supabase
+    .from('workout_sessions')
+    .select('date')
+    .gte('date', rangeStartStr);
+
+  const trainedDates = new Set((recentDatesRaw ?? []).map((r) => r.date as string));
+
+  const streakDays: { dateStr: string; trained: boolean; label: string }[] = [];
+  for (let i = DAYS_BACK - 1; i >= 0; i--) {
+    const d = new Date(todayMidnight);
+    d.setDate(d.getDate() - i);
+    const dateStr = toLocalDateStr(d);
+    streakDays.push({
+      dateStr,
+      trained: trainedDates.has(dateStr),
+      label: d.toLocaleDateString(isArabic ? 'ar' : 'en', { day: 'numeric', month: 'short' }),
+    });
+  }
+
+  const trainedCountLast28 = streakDays.filter((d) => d.trained).length;
+
   const t = {
     welcome: isArabic ? `أهلاً، ${displayName} 👋` : `Welcome, ${displayName} 👋`,
-    subtitle: isArabic ? 'جاهز لتبدأ تمرين اليوم؟' : "Ready to start today's workout?",
+    subtitle: isArabic
+      ? isFemale
+        ? 'جاهزة لتبدئي تمرين اليوم؟'
+        : 'جاهز لتبدأ تمرين اليوم؟'
+      : "Ready to start today's workout?",
     startWorkout: isArabic ? 'ابدأ تمرين جديد' : 'Start New Workout',
     recentSessions: isArabic ? 'آخر التمارين' : 'Recent Sessions',
     noSessions: isArabic
@@ -83,6 +215,9 @@ export default async function DashboardPage({ params }: Props) {
     setsLabel: isArabic ? 'سيت' : 'sets',
     minutesLabel: isArabic ? 'د' : 'min',
     noExerciseNames: '—',
+    streakTitle: isArabic ? 'آخر 28 يوم' : 'Last 28 days',
+    streakCount: (n: number) =>
+      isArabic ? `تمرنت ${n} يوم من ${DAYS_BACK}` : `Trained ${n} of ${DAYS_BACK} days`,
   };
 
   function formatDate(dateStr: string) {
@@ -138,6 +273,47 @@ export default async function DashboardPage({ params }: Props) {
       >
         {t.startWorkout}
       </a>
+
+      <div
+        style={{
+          backgroundColor: '#171717',
+          border: '1px solid #262626',
+          borderRadius: '12px',
+          padding: '16px 20px',
+          marginBottom: '24px',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
+            marginBottom: '10px',
+          }}
+        >
+          <h2 style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#A3A3A3' }}>
+            {t.streakTitle}
+          </h2>
+          <span style={{ fontSize: '12px', color: '#737373' }}>
+            {t.streakCount(trainedCountLast28)}
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: '4px', overflowX: 'auto', paddingBottom: '2px' }}>
+          {streakDays.map((day) => (
+            <div
+              key={day.dateStr}
+              title={day.label}
+              style={{
+                flexShrink: 0,
+                width: '14px',
+                height: '14px',
+                borderRadius: '4px',
+                backgroundColor: day.trained ? '#C4F82A' : '#262626',
+              }}
+            />
+          ))}
+        </div>
+      </div>
 
       <div
         style={{
@@ -206,9 +382,36 @@ export default async function DashboardPage({ params }: Props) {
           }}
         >
           <h2 style={{ margin: '0 0 8px', fontSize: '15px', fontWeight: 600 }}>{t.insights}</h2>
-          <p style={{ color: '#A3A3A3', fontSize: '14px', margin: 0, lineHeight: 1.6 }}>
-            {t.insightsPlaceholder}
-          </p>
+          {topInsights.length === 0 ? (
+            <p style={{ color: '#A3A3A3', fontSize: '14px', margin: 0, lineHeight: 1.6 }}>
+              {t.insightsPlaceholder}
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {topInsights.map((insight, i) => {
+                const color =
+                  insight.type === 'pr'
+                    ? '#FFD700'
+                    : insight.type === 'plateau'
+                      ? '#FBBF24'
+                      : '#4ADE80';
+                return (
+                  <p
+                    key={i}
+                    style={{
+                      fontSize: '13px',
+                      lineHeight: 1.6,
+                      margin: 0,
+                      color,
+                      fontWeight: insight.type === 'pr' ? 700 : 400,
+                    }}
+                  >
+                    {insight.message}
+                  </p>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>

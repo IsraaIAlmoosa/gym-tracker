@@ -19,15 +19,17 @@ export default async function NewWorkoutPage({ params }: Props) {
     redirect(`/${locale}/login`);
   }
 
-  const { data: profile, error: profileError } = await supabase
+  const { data: profile } = await supabase
     .from('profiles')
-    .select('avoided_areas')
+    .select('avoided_areas, gender, age')
     .eq('id', user.id)
     .maybeSingle();
 
   const avoidedAreas: string[] = profile?.avoided_areas ?? [];
+  const gender = (profile?.gender ?? null) as 'male' | 'female' | null;
+  const age = (profile?.age ?? null) as number | null;
 
-  const { data: exercises, error: exercisesError } = await supabase
+  const { data: exercises } = await supabase
     .from('exercises')
     .select(
       'id, name_ar, name_en, muscle_group_ar, muscle_group_en, affects_areas, impact_level'
@@ -48,6 +50,8 @@ export default async function NewWorkoutPage({ params }: Props) {
       locale={locale}
       exercises={availableExercises}
       hiddenCount={hiddenCount}
+      gender={gender}
+      age={age}
     />
   );
 }

@@ -24,6 +24,42 @@ function HomeIcon({ color }: { color: string }) {
   );
 }
 
+function ProgressIcon({ color }: { color: string }) {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 17l6-6 4 4 8-8" />
+      <path d="M21 7v6h-6" />
+    </svg>
+  );
+}
+
+function SettingsIcon({ color }: { color: string }) {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z" />
+    </svg>
+  );
+}
+
 function PlusCircleIcon({ color, filled }: { color: string; filled: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -56,10 +92,14 @@ export default function BottomNav() {
 
   const isHome = pathname === '/' || pathname.startsWith('/dashboard');
   const isWorkout = pathname.startsWith('/workouts');
+  const isProgress = pathname.startsWith('/measurements');
+  const isSettings = pathname.startsWith('/settings');
 
   const t = {
     home: isArabic ? 'الرئيسية' : 'Home',
     start: isArabic ? 'ابدأ' : 'Start',
+    progress: isArabic ? 'التقدم' : 'Progress',
+    settings: isArabic ? 'الإعدادات' : 'Settings',
   };
 
   return (
@@ -111,6 +151,40 @@ export default function BottomNav() {
       >
         <PlusCircleIcon color={isWorkout ? ACTIVE_COLOR : INACTIVE_COLOR} filled={isWorkout} />
         {t.start}
+      </Link>
+
+      <Link
+        href="/measurements"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '2px',
+          textDecoration: 'none',
+          color: isProgress ? ACTIVE_COLOR : INACTIVE_COLOR,
+          fontSize: '11px',
+          fontWeight: isProgress ? 700 : 400,
+        }}
+      >
+        <ProgressIcon color={isProgress ? ACTIVE_COLOR : INACTIVE_COLOR} />
+        {t.progress}
+      </Link>
+
+      <Link
+        href="/settings"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '2px',
+          textDecoration: 'none',
+          color: isSettings ? ACTIVE_COLOR : INACTIVE_COLOR,
+          fontSize: '11px',
+          fontWeight: isSettings ? 700 : 400,
+        }}
+      >
+        <SettingsIcon color={isSettings ? ACTIVE_COLOR : INACTIVE_COLOR} />
+        {t.settings}
       </Link>
     </nav>
   );
