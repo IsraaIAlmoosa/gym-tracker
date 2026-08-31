@@ -1,6 +1,10 @@
 -- Gym Tracker: initial schema (exercises, workout_sessions, workout_sets, smart_insights)
 -- Enables Row Level Security so each user only sees their own rows,
 -- except `exercises` where `is_default = true` rows are shared with everyone.
+--
+-- This migration is written to be safely re-runnable: every CREATE POLICY is
+-- preceded by DROP POLICY IF EXISTS, since Postgres has no
+-- "CREATE POLICY IF NOT EXISTS" syntax.
 
 create extension if not exists pgcrypto with schema extensions;
 
@@ -31,6 +35,7 @@ create index if not exists exercises_is_default_idx on public.exercises (is_defa
 alter table public.exercises enable row level security;
 
 -- Everyone (any authenticated user) can see default exercises plus their own custom ones.
+drop policy if exists "exercises_select_own_or_default" on public.exercises;
 create policy "exercises_select_own_or_default"
   on public.exercises for select
   to authenticated
@@ -38,17 +43,20 @@ create policy "exercises_select_own_or_default"
 
 -- Users may only create their own (non-default) exercises.
 -- Default/shared exercises are seeded separately with elevated privileges.
+drop policy if exists "exercises_insert_own" on public.exercises;
 create policy "exercises_insert_own"
   on public.exercises for insert
   to authenticated
   with check (is_default = false and created_by_user_id = auth.uid());
 
+drop policy if exists "exercises_update_own" on public.exercises;
 create policy "exercises_update_own"
   on public.exercises for update
   to authenticated
   using (is_default = false and created_by_user_id = auth.uid())
   with check (is_default = false and created_by_user_id = auth.uid());
 
+drop policy if exists "exercises_delete_own" on public.exercises;
 create policy "exercises_delete_own"
   on public.exercises for delete
   to authenticated
@@ -70,22 +78,26 @@ create index if not exists workout_sessions_date_idx on public.workout_sessions 
 
 alter table public.workout_sessions enable row level security;
 
+drop policy if exists "workout_sessions_select_own" on public.workout_sessions;
 create policy "workout_sessions_select_own"
   on public.workout_sessions for select
   to authenticated
   using (user_id = auth.uid());
 
+drop policy if exists "workout_sessions_insert_own" on public.workout_sessions;
 create policy "workout_sessions_insert_own"
   on public.workout_sessions for insert
   to authenticated
   with check (user_id = auth.uid());
 
+drop policy if exists "workout_sessions_update_own" on public.workout_sessions;
 create policy "workout_sessions_update_own"
   on public.workout_sessions for update
   to authenticated
   using (user_id = auth.uid())
   with check (user_id = auth.uid());
 
+drop policy if exists "workout_sessions_delete_own" on public.workout_sessions;
 create policy "workout_sessions_delete_own"
   on public.workout_sessions for delete
   to authenticated
@@ -110,6 +122,7 @@ create index if not exists workout_sets_exercise_id_idx on public.workout_sets (
 
 alter table public.workout_sets enable row level security;
 
+drop policy if exists "workout_sets_select_own" on public.workout_sets;
 create policy "workout_sets_select_own"
   on public.workout_sets for select
   to authenticated
@@ -120,6 +133,7 @@ create policy "workout_sets_select_own"
     )
   );
 
+drop policy if exists "workout_sets_insert_own" on public.workout_sets;
 create policy "workout_sets_insert_own"
   on public.workout_sets for insert
   to authenticated
@@ -130,6 +144,7 @@ create policy "workout_sets_insert_own"
     )
   );
 
+drop policy if exists "workout_sets_update_own" on public.workout_sets;
 create policy "workout_sets_update_own"
   on public.workout_sets for update
   to authenticated
@@ -146,6 +161,7 @@ create policy "workout_sets_update_own"
     )
   );
 
+drop policy if exists "workout_sets_delete_own" on public.workout_sets;
 create policy "workout_sets_delete_own"
   on public.workout_sets for delete
   to authenticated
@@ -174,6 +190,7 @@ create index if not exists smart_insights_is_read_idx on public.smart_insights (
 
 alter table public.smart_insights enable row level security;
 
+drop policy if exists "smart_insights_select_own" on public.smart_insights;
 create policy "smart_insights_select_own"
   on public.smart_insights for select
   to authenticated
@@ -181,18 +198,21 @@ create policy "smart_insights_select_own"
 
 -- Insights are normally generated server-side (service role bypasses RLS),
 -- but this allows a client to insert its own if ever needed.
+drop policy if exists "smart_insights_insert_own" on public.smart_insights;
 create policy "smart_insights_insert_own"
   on public.smart_insights for insert
   to authenticated
   with check (user_id = auth.uid());
 
 -- Clients only need to update `is_read` on their own insights.
+drop policy if exists "smart_insights_update_own" on public.smart_insights;
 create policy "smart_insights_update_own"
   on public.smart_insights for update
   to authenticated
   using (user_id = auth.uid())
   with check (user_id = auth.uid());
 
+drop policy if exists "smart_insights_delete_own" on public.smart_insights;
 create policy "smart_insights_delete_own"
   on public.smart_insights for delete
   to authenticated

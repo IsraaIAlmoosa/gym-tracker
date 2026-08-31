@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import GenderSettingsForm from '@/components/GenderSettingsForm';
+import type { WeightUnit } from '@/lib/units';
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -21,9 +22,11 @@ export default async function SettingsPage({ params }: Props) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('gender, age')
+    .select('gender, age, preferred_weight_unit')
     .eq('id', user.id)
     .maybeSingle();
+
+  const weightUnit = (profile?.preferred_weight_unit ?? 'kg') as WeightUnit;
 
   const t = {
     title: isArabic ? 'الإعدادات' : 'Settings',
@@ -68,6 +71,7 @@ export default async function SettingsPage({ params }: Props) {
           locale={locale}
           initialGender={profile?.gender ?? null}
           initialAge={profile?.age ?? null}
+          initialWeightUnit={weightUnit}
         />
       </div>
     </div>

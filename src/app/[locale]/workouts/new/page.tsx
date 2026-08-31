@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import WorkoutBuilder from '@/components/WorkoutBuilder';
+import LoadErrorNotice from '@/components/LoadErrorNotice';
+import type { WeightUnit } from '@/lib/units';
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -19,22 +21,27 @@ export default async function NewWorkoutPage({ params }: Props) {
     redirect(`/${locale}/login`);
   }
 
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('avoided_areas, gender, age')
+    .select('avoided_areas, gender, age, preferred_weight_unit')
     .eq('id', user.id)
     .maybeSingle();
 
   const avoidedAreas: string[] = profile?.avoided_areas ?? [];
   const gender = (profile?.gender ?? null) as 'male' | 'female' | null;
   const age = (profile?.age ?? null) as number | null;
+  const weightUnit = (profile?.preferred_weight_unit ?? 'kg') as WeightUnit;
 
-  const { data: exercises } = await supabase
+  const { data: exercises, error: exercisesError } = await supabase
     .from('exercises')
     .select(
-      'id, name_ar, name_en, muscle_group_ar, muscle_group_en, affects_areas, impact_level'
+      'id, name_ar, name_en, muscle_group_ar, muscle_group_en, equipment_ar, equipment_en, affects_areas, impact_level'
     )
     .order(isArabic ? 'name_ar' : 'name_en');
+
+  if (profileError || exercisesError) {
+    return <LoadErrorNotice locale={locale} />;
+  }
 
   const allExercises = exercises ?? [];
 
@@ -52,6 +59,7 @@ export default async function NewWorkoutPage({ params }: Props) {
       hiddenCount={hiddenCount}
       gender={gender}
       age={age}
+      weightUnit={weightUnit}
     />
   );
 }

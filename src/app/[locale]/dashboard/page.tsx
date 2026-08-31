@@ -215,6 +215,7 @@ export default async function DashboardPage({ params }: Props) {
     setsLabel: isArabic ? 'سيت' : 'sets',
     minutesLabel: isArabic ? 'د' : 'min',
     noExerciseNames: '—',
+    viewFullHistory: isArabic ? 'عرض كل السجل →' : 'View full history →',
     streakTitle: isArabic ? 'آخر 28 يوم' : 'Last 28 days',
     streakCount: (n: number) =>
       isArabic ? `تمرنت ${n} يوم من ${DAYS_BACK}` : `Trained ${n} of ${DAYS_BACK} days`,
@@ -330,9 +331,22 @@ export default async function DashboardPage({ params }: Props) {
             padding: '20px',
           }}
         >
-          <h2 style={{ margin: '0 0 12px', fontSize: '15px', fontWeight: 600 }}>
-            {t.recentSessions}
-          </h2>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+              marginBottom: '12px',
+            }}
+          >
+            <h2 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>{t.recentSessions}</h2>
+            <a
+              href={`/${locale}/history`}
+              style={{ color: '#C4F82A', fontSize: '12px', textDecoration: 'none' }}
+            >
+              {t.viewFullHistory}
+            </a>
+          </div>
           {sessionList.length === 0 ? (
             <p style={{ color: '#A3A3A3', fontSize: '14px', margin: 0, lineHeight: 1.6 }}>
               {t.noSessions}

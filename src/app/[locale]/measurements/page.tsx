@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import MeasurementForm from '@/components/MeasurementForm';
+import LoadErrorNotice from '@/components/LoadErrorNotice';
+import { kgToDisplayUnit, weightUnitLabel, type WeightUnit } from '@/lib/units';
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -33,11 +35,22 @@ export default async function MeasurementsPage({ params }: Props) {
     redirect(`/${locale}/login`);
   }
 
-  const { data: rows } = await supabase
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('preferred_weight_unit')
+    .eq('id', user.id)
+    .maybeSingle();
+
+  const { data: rows, error: rowsError } = await supabase
     .from('body_measurements')
     .select('id, measurement_date, weight_kg, waist_cm, chest_cm, arm_cm, thigh_cm, hip_cm, notes')
     .order('measurement_date', { ascending: false });
 
+  if (profileError || rowsError) {
+    return <LoadErrorNotice locale={locale} />;
+  }
+
+  const weightUnit = (profile?.preferred_weight_unit ?? 'kg') as WeightUnit;
   const measurements: MeasurementRow[] = rows ?? [];
 
   const t = {
@@ -105,7 +118,7 @@ export default async function MeasurementsPage({ params }: Props) {
         }}
       >
         <h2 style={{ margin: '0 0 16px', fontSize: '15px', fontWeight: 600 }}>{t.addNew}</h2>
-        <MeasurementForm locale={locale} />
+        <MeasurementForm locale={locale} weightUnit={weightUnit} />
       </div>
 
       <h2 style={{ fontSize: '15px', fontWeight: 600, margin: '0 0 12px' }}>{t.history}</h2>
@@ -137,16 +150,24 @@ export default async function MeasurementsPage({ params }: Props) {
                   }}
                 >
                   {FIELD_KEYS.map((key) => {
-                    const value = m[key];
-                    if (value === null) return null;
-                    const prevValue = previous ? previous[key] : null;
+                    const rawValue = m[key];
+                    if (rawValue === null) return null;
+                    const rawPrevValue = previous ? previous[key] : null;
+
+                    const isWeight = key === 'weight_kg';
+                    const value = isWeight ? kgToDisplayUnit(rawValue, weightUnit) : rawValue;
+                    const prevValue =
+                      isWeight && rawPrevValue !== null && rawPrevValue !== undefined
+                        ? kgToDisplayUnit(rawPrevValue, weightUnit)
+                        : rawPrevValue;
+                    const unit = isWeight ? weightUnitLabel(weightUnit, isArabic) : t.units[key];
                     const delta =
                       prevValue !== null && prevValue !== undefined ? value - prevValue : null;
                     return (
                       <div key={key}>
                         <div style={{ fontSize: '11px', color: '#737373' }}>{t.labels[key]}</div>
                         <div style={{ fontSize: '15px', fontWeight: 700 }}>
-                          {value} {t.units[key]}
+                          {value} {unit}
                         </div>
                         {delta !== null && delta !== 0 && (
                           <div style={{ fontSize: '11px', color: '#A3A3A3' }}>

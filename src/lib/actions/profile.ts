@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 type SaveProfileInfoInput = {
   gender: 'male' | 'female';
   age: number | null;
+  preferredWeightUnit: 'kg' | 'lb';
 };
 
 type SaveProfileInfoResult = { success: true } | { success: false; error: string };
@@ -24,7 +25,11 @@ export async function saveProfileInfo(
 
   const { error } = await supabase
     .from('profiles')
-    .update({ gender: input.gender, age: input.age })
+    .update({
+      gender: input.gender,
+      age: input.age,
+      preferred_weight_unit: input.preferredWeightUnit,
+    })
     .eq('id', user.id);
 
   if (error) {

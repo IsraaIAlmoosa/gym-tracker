@@ -9,6 +9,9 @@
 -- the Supabase dashboard's Table Editor). No RLS policy allows regular
 -- users to write to this table — only the trigger (SECURITY DEFINER) or an
 -- admin/service-role connection can.
+--
+-- This migration is written to be safely re-runnable: CREATE POLICY is
+-- preceded by DROP POLICY IF EXISTS, and functions use CREATE OR REPLACE.
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
@@ -21,13 +24,14 @@ alter table public.profiles enable row level security;
 
 -- Users can see their own subscription status, but cannot insert/update/
 -- delete it themselves — those columns are admin/billing-system controlled.
+drop policy if exists "profiles_select_own" on public.profiles;
 create policy "profiles_select_own"
   on public.profiles for select
   to authenticated
   using (id = auth.uid());
 
 -- Auto-create a profile row whenever a new auth user signs up.
-create function public.handle_new_user()
+create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer set search_path = public
@@ -53,7 +57,7 @@ on conflict (id) do nothing;
 
 -- Reusable predicate: true if the user has an active paid subscription
 -- OR has been manually granted premium access.
-create function public.is_premium_user(user_id uuid)
+create or replace function public.is_premium_user(user_id uuid)
 returns boolean
 language sql
 stable

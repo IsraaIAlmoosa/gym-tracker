@@ -3,22 +3,30 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveProfileInfo } from '@/lib/actions/profile';
+import type { WeightUnit } from '@/lib/units';
 
 type Props = {
   locale: string;
   initialGender: 'male' | 'female' | null;
   initialAge: number | null;
+  initialWeightUnit: WeightUnit;
 };
 
 const ACCENT = '#C4F82A';
 const CARD_BORDER = '#262626';
 const MUTED = '#737373';
 
-export default function GenderSettingsForm({ locale, initialGender, initialAge }: Props) {
+export default function GenderSettingsForm({
+  locale,
+  initialGender,
+  initialAge,
+  initialWeightUnit,
+}: Props) {
   const isArabic = locale === 'ar';
   const router = useRouter();
   const [selectedGender, setSelectedGender] = useState<'male' | 'female' | null>(initialGender);
   const [ageInput, setAgeInput] = useState<string>(initialAge ? String(initialAge) : '');
+  const [weightUnit, setWeightUnit] = useState<WeightUnit>(initialWeightUnit);
   const [saving, setSaving] = useState(false);
   const [savedMsg, setSavedMsg] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -27,6 +35,9 @@ export default function GenderSettingsForm({ locale, initialGender, initialAge }
     male: isArabic ? 'ذكر' : 'Male',
     female: isArabic ? 'أنثى' : 'Female',
     ageLabel: isArabic ? 'العمر' : 'Age',
+    weightUnitLabel: isArabic ? 'وحدة الوزن' : 'Weight unit',
+    kg: isArabic ? 'كيلوغرام (كغم)' : 'Kilograms (kg)',
+    lb: isArabic ? 'باوند (lb)' : 'Pounds (lb)',
     save: isArabic ? 'حفظ' : 'Save',
     saving: isArabic ? 'جارٍ الحفظ...' : 'Saving...',
     saved: isArabic ? 'تم الحفظ ✓' : 'Saved ✓',
@@ -52,7 +63,11 @@ export default function GenderSettingsForm({ locale, initialGender, initialAge }
     setErrorMsg(null);
     setSaving(true);
     setSavedMsg(false);
-    const result = await saveProfileInfo({ gender: selectedGender, age });
+    const result = await saveProfileInfo({
+      gender: selectedGender,
+      age,
+      preferredWeightUnit: weightUnit,
+    });
     setSaving(false);
     if (result.success) {
       setSavedMsg(true);
@@ -114,6 +129,40 @@ export default function GenderSettingsForm({ locale, initialGender, initialAge }
             fontSize: '14px',
           }}
         />
+      </div>
+
+      <div style={{ marginBottom: '16px' }}>
+        <label
+          style={{
+            display: 'block',
+            fontSize: '13px',
+            color: MUTED,
+            marginBottom: '6px',
+          }}
+        >
+          {t.weightUnitLabel}
+        </label>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          {(['kg', 'lb'] as const).map((u) => (
+            <button
+              key={u}
+              onClick={() => setWeightUnit(u)}
+              style={{
+                flex: 1,
+                padding: '12px',
+                borderRadius: '10px',
+                border: `2px solid ${weightUnit === u ? ACCENT : CARD_BORDER}`,
+                backgroundColor: weightUnit === u ? 'rgba(196, 248, 42, 0.1)' : 'transparent',
+                color: weightUnit === u ? ACCENT : '#FFFFFF',
+                fontWeight: 700,
+                fontSize: '13px',
+                cursor: 'pointer',
+              }}
+            >
+              {u === 'kg' ? t.kg : t.lb}
+            </button>
+          ))}
+        </div>
       </div>
 
       {errorMsg && (

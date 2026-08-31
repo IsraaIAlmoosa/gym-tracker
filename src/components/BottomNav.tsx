@@ -24,6 +24,25 @@ function HomeIcon({ color }: { color: string }) {
   );
 }
 
+function HistoryIcon({ color }: { color: string }) {
+  return (
+    <svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={color}
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 12a9 9 0 1 0 3-6.7" />
+      <path d="M3 4v5h5" />
+      <path d="M12 8v4l3 3" />
+    </svg>
+  );
+}
+
 function ProgressIcon({ color }: { color: string }) {
   return (
     <svg
@@ -91,12 +110,14 @@ export default function BottomNav() {
   }
 
   const isHome = pathname === '/' || pathname.startsWith('/dashboard');
+  const isHistory = pathname.startsWith('/history');
   const isWorkout = pathname.startsWith('/workouts');
   const isProgress = pathname.startsWith('/measurements');
   const isSettings = pathname.startsWith('/settings');
 
   const t = {
     home: isArabic ? 'الرئيسية' : 'Home',
+    history: isArabic ? 'السجل' : 'History',
     start: isArabic ? 'ابدأ' : 'Start',
     progress: isArabic ? 'التقدم' : 'Progress',
     settings: isArabic ? 'الإعدادات' : 'Settings',
@@ -134,6 +155,23 @@ export default function BottomNav() {
       >
         <HomeIcon color={isHome ? ACTIVE_COLOR : INACTIVE_COLOR} />
         {t.home}
+      </Link>
+
+      <Link
+        href="/history"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '2px',
+          textDecoration: 'none',
+          color: isHistory ? ACTIVE_COLOR : INACTIVE_COLOR,
+          fontSize: '11px',
+          fontWeight: isHistory ? 700 : 400,
+        }}
+      >
+        <HistoryIcon color={isHistory ? ACTIVE_COLOR : INACTIVE_COLOR} />
+        {t.history}
       </Link>
 
       <Link

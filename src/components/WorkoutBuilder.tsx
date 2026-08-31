@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveWorkout } from '@/lib/actions/workouts';
 import { CategoryIcon, getExerciseCategory, getOrderedCategories, type CategorySlug } from '@/lib/categories';
+import { displayUnitToKg, kgToDisplayUnit, weightUnitLabel, type WeightUnit } from '@/lib/units';
 
 type Exercise = {
   id: string;
@@ -11,6 +12,8 @@ type Exercise = {
   name_en: string;
   muscle_group_ar: string | null;
   muscle_group_en: string | null;
+  equipment_ar: string | null;
+  equipment_en: string | null;
   affects_areas: string[] | null;
   impact_level: number | null;
 };
@@ -34,6 +37,7 @@ type Props = {
   hiddenCount: number;
   gender: 'male' | 'female' | null;
   age: number | null;
+  weightUnit: WeightUnit;
 };
 
 const OLDER_AGE_THRESHOLD = 45;
@@ -51,15 +55,24 @@ const CARD_BG = '#171717';
 const CARD_BORDER = '#262626';
 const MUTED = '#737373';
 
-export default function WorkoutBuilder({ locale, exercises, hiddenCount, gender, age }: Props) {
+export default function WorkoutBuilder({
+  locale,
+  exercises,
+  hiddenCount,
+  gender,
+  age,
+  weightUnit,
+}: Props) {
   const isArabic = locale === 'ar';
   const router = useRouter();
   const startTimeRef = useRef<number>(Date.now());
   const orderedCategories = getOrderedCategories(gender);
   const preferLowerImpactFirst = age !== null && age >= OLDER_AGE_THRESHOLD;
+  const unitLabel = weightUnitLabel(weightUnit, isArabic);
 
   const [sessionExercises, setSessionExercises] = useState<SessionExercise[]>([]);
   const [activeCategory, setActiveCategory] = useState<CategorySlug | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -91,7 +104,9 @@ export default function WorkoutBuilder({ locale, exercises, hiddenCount, gender,
     noExercisesInCategory: isArabic
       ? 'كل تمارين هذي المجموعة مضافة بالفعل'
       : 'All exercises in this group are already added',
-    weight: isArabic ? 'الوزن (كغم)' : 'Weight (kg)',
+    searchPlaceholder: isArabic ? 'ابحث عن تمرين...' : 'Search exercises...',
+    noSearchResults: isArabic ? 'ما فيه نتائج مطابقة' : 'No matching exercises',
+    weight: isArabic ? `الوزن (${unitLabel})` : `Weight (${unitLabel})`,
     reps: isArabic ? 'التكرارات' : 'Reps',
     addSet: isArabic ? 'إضافة سيت' : 'Add set',
     setLabel: isArabic ? 'سيت' : 'Set',
@@ -133,6 +148,63 @@ export default function WorkoutBuilder({ locale, exercises, hiddenCount, gender,
         })
     : [];
 
+  const trimmedQuery = searchQuery.trim().toLowerCase();
+  const searchResults = trimmedQuery
+    ? pickableExercises.filter((ex) =>
+        (isArabic ? ex.name_ar : ex.name_en).toLowerCase().includes(trimmedQuery)
+      )
+    : [];
+
+  function renderExerciseRow(ex: Exercise) {
+    const impactColor = ex.impact_level ? IMPACT_COLOR[ex.impact_level] : MUTED;
+    const impactLabel = ex.impact_level ? t.impact[ex.impact_level] : null;
+    const equipmentLabel = isArabic ? ex.equipment_ar : ex.equipment_en;
+    return (
+      <button
+        key={ex.id}
+        onClick={() => addExerciseById(ex.id)}
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          backgroundColor: CARD_BG,
+          border: `1px solid ${CARD_BORDER}`,
+          borderRadius: '10px',
+          padding: '12px 16px',
+          cursor: 'pointer',
+          textAlign: isArabic ? 'right' : 'left',
+        }}
+      >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span style={{ fontSize: '14px', fontWeight: 600, color: '#FFFFFF' }}>
+              {isArabic ? ex.name_ar : ex.name_en}
+            </span>
+            {equipmentLabel && (
+              <span
+                style={{
+                  padding: '1px 7px',
+                  borderRadius: '999px',
+                  backgroundColor: '#262626',
+                  color: '#A3A3A3',
+                  fontSize: '10px',
+                  fontWeight: 500,
+                }}
+              >
+                {equipmentLabel}
+              </span>
+            )}
+          </div>
+          <div style={{ fontSize: '12px', color: MUTED, marginTop: '2px' }}>
+            {isArabic ? ex.muscle_group_ar : ex.muscle_group_en}
+            {impactLabel && <span style={{ color: impactColor }}> · {impactLabel}</span>}
+          </div>
+        </div>
+        <span style={{ color: ACCENT, fontSize: '20px', fontWeight: 700 }}>+</span>
+      </button>
+    );
+  }
+
   function addExerciseById(id: string) {
     const exercise = exercises.find((ex) => ex.id === id);
     if (!exercise) return;
@@ -152,12 +224,12 @@ export default function WorkoutBuilder({ locale, exercises, hiddenCount, gender,
     setSessionExercises((prev) =>
       prev.map((se, i) => {
         if (i !== index) return se;
-        const weight = parseFloat(se.draftWeight);
+        const enteredWeight = parseFloat(se.draftWeight);
         const reps = parseInt(se.draftReps, 10);
-        if (Number.isNaN(weight) || Number.isNaN(reps) || reps <= 0) return se;
+        if (Number.isNaN(enteredWeight) || Number.isNaN(reps) || reps <= 0) return se;
         const newSet: LoggedSet = {
           setNumber: se.sets.length + 1,
-          weight,
+          weight: displayUnitToKg(enteredWeight, weightUnit),
           reps,
         };
         return {
@@ -275,7 +347,32 @@ export default function WorkoutBuilder({ locale, exercises, hiddenCount, gender,
       )}
 
       <div style={{ marginBottom: '28px' }}>
-        {activeCategory === null ? (
+        <input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder={t.searchPlaceholder}
+          style={{
+            width: '100%',
+            backgroundColor: CARD_BG,
+            color: '#FFFFFF',
+            border: `1px solid ${CARD_BORDER}`,
+            borderRadius: '10px',
+            padding: '12px 14px',
+            fontSize: '14px',
+            marginBottom: '16px',
+          }}
+        />
+
+        {trimmedQuery ? (
+          searchResults.length === 0 ? (
+            <p style={{ color: MUTED, fontSize: '14px' }}>{t.noSearchResults}</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {searchResults.map((ex) => renderExerciseRow(ex))}
+            </div>
+          )
+        ) : activeCategory === null ? (
           <>
             <h2 style={{ fontSize: '14px', fontWeight: 600, color: MUTED, margin: '0 0 12px' }}>
               {t.pickCategory}
@@ -345,40 +442,7 @@ export default function WorkoutBuilder({ locale, exercises, hiddenCount, gender,
               <p style={{ color: MUTED, fontSize: '14px' }}>{t.noExercisesInCategory}</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {exercisesInActiveCategory.map((ex) => {
-                  const impactColor = ex.impact_level ? IMPACT_COLOR[ex.impact_level] : MUTED;
-                  const impactLabel = ex.impact_level ? t.impact[ex.impact_level] : null;
-                  return (
-                    <button
-                      key={ex.id}
-                      onClick={() => addExerciseById(ex.id)}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        backgroundColor: CARD_BG,
-                        border: `1px solid ${CARD_BORDER}`,
-                        borderRadius: '10px',
-                        padding: '12px 16px',
-                        cursor: 'pointer',
-                        textAlign: isArabic ? 'right' : 'left',
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontSize: '14px', fontWeight: 600, color: '#FFFFFF' }}>
-                          {isArabic ? ex.name_ar : ex.name_en}
-                        </div>
-                        <div style={{ fontSize: '12px', color: MUTED, marginTop: '2px' }}>
-                          {isArabic ? ex.muscle_group_ar : ex.muscle_group_en}
-                          {impactLabel && (
-                            <span style={{ color: impactColor }}> · {impactLabel}</span>
-                          )}
-                        </div>
-                      </div>
-                      <span style={{ color: ACCENT, fontSize: '20px', fontWeight: 700 }}>+</span>
-                    </button>
-                  );
-                })}
+                {exercisesInActiveCategory.map((ex) => renderExerciseRow(ex))}
               </div>
             )}
           </>
@@ -458,7 +522,9 @@ export default function WorkoutBuilder({ locale, exercises, hiddenCount, gender,
                       <span style={{ color: MUTED, width: '48px' }}>
                         {t.setLabel} {s.setNumber}
                       </span>
-                      <span>{s.weight} kg</span>
+                      <span>
+                        {kgToDisplayUnit(s.weight, weightUnit)} {unitLabel}
+                      </span>
                       <span>× {s.reps}</span>
                     </div>
                   ))}

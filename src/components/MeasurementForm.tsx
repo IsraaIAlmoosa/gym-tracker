@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { saveMeasurement } from '@/lib/actions/measurements';
+import { displayUnitToKg, weightUnitLabel, type WeightUnit } from '@/lib/units';
 
 type Props = {
   locale: string;
+  weightUnit: WeightUnit;
 };
 
 const ACCENT = '#C4F82A';
@@ -21,9 +23,10 @@ function toLocalDateStr(d: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-export default function MeasurementForm({ locale }: Props) {
+export default function MeasurementForm({ locale, weightUnit }: Props) {
   const isArabic = locale === 'ar';
   const router = useRouter();
+  const unitLabel = weightUnitLabel(weightUnit, isArabic);
 
   const today = toLocalDateStr(new Date());
   const [date, setDate] = useState(today);
@@ -42,7 +45,7 @@ export default function MeasurementForm({ locale }: Props) {
 
   const t = {
     date: isArabic ? 'التاريخ' : 'Date',
-    weight: isArabic ? 'الوزن (كغم)' : 'Weight (kg)',
+    weight: isArabic ? `الوزن (${unitLabel})` : `Weight (${unitLabel})`,
     waist: isArabic ? 'الخصر (سم)' : 'Waist (cm)',
     chest: isArabic ? 'الصدر (سم)' : 'Chest (cm)',
     arm: isArabic ? 'الذراع (سم)' : 'Arm (cm)',
@@ -88,9 +91,11 @@ export default function MeasurementForm({ locale }: Props) {
     setSaving(true);
     setSavedMsg(false);
 
+    const enteredWeight = parseOrNull(values.weight);
+
     const result = await saveMeasurement({
       measurementDate: date,
-      weightKg: parseOrNull(values.weight),
+      weightKg: enteredWeight !== null ? displayUnitToKg(enteredWeight, weightUnit) : null,
       waistCm: parseOrNull(values.waist),
       chestCm: parseOrNull(values.chest),
       armCm: parseOrNull(values.arm),
