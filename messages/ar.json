@@ -21,6 +21,7 @@
     "signOut": "تسجيل خروج",
     "setsLabel": "مجموعة",
     "minutesLabel": "د",
+    "logActivity": "تسجيل نشاط بالمدة",
     "viewFullHistory": "عرض كل السجل →",
     "streakTitle": "آخر 28 يوم",
     "streakCount": "تمرنت {n} يوم من {days}",
@@ -30,7 +31,11 @@
   },
   "workoutBuilder": {
     "title": "تسجيل تمرين جديد",
+    "editTitle": "تعديل التمرين",
     "back": "← رجوع للداشبورد",
+    "backToHistory": "← رجوع للسجل",
+    "durationLabel": "المدة (دقيقة)",
+    "update": "تحديث التمرين",
     "backToCategories": "← كل المجموعات",
     "pickCategory": "اختر مجموعة عضلية",
     "hiddenNote": "تم إخفاء {n} تمرين بسبب إعدادات المناطق المتجنبة",
@@ -45,6 +50,7 @@
     "totalSetsCount": "{n} مجموعة",
     "noSetsYet": "لسا ما سجلت أي مجموعة لهذا التمرين",
     "remove": "إزالة",
+    "removeSet": "حذف المجموعة",
     "restTitle": "وقت الراحة",
     "skipRest": "تخطي",
     "save": "حفظ التمرين",
@@ -160,7 +166,12 @@
     "noSessions": "ما فيه أي جلسات تمرين مسجلة بعد.",
     "noSessionsInRange": "ما فيه جلسات بهذا النطاق الزمني.",
     "setsLabel": "مجموعة",
-    "minutesLabel": "د"
+    "minutesLabel": "د",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "deleteSessionConfirm": "متأكد تبي تحذف جلسة التمرين هذي؟",
+    "deleteActivityConfirm": "متأكد تبي تحذف هذا النشاط؟",
+    "deleteError": "صار خطأ أثناء الحذف، حاول مرة ثانية"
   },
   "units": {
     "kg": "كغم",
@@ -177,5 +188,31 @@
     "start": "ابدأ",
     "progress": "التقدم",
     "settings": "الإعدادات"
+  },
+  "activityTypes": {
+    "yoga": "يوغا",
+    "pilates": "بيلاتس",
+    "tai_chi": "تاي تشي",
+    "walking": "مشي",
+    "other": "أخرى"
+  },
+  "activities": {
+    "title": "تسجيل نشاط",
+    "back": "← رجوع للداشبورد"
+  },
+  "activityForm": {
+    "date": "التاريخ",
+    "activityType": "نوع النشاط",
+    "customActivityName": "اسم النشاط",
+    "duration": "المدة (دقيقة)",
+    "notes": "ملاحظات (اختياري)",
+    "save": "حفظ النشاط",
+    "update": "تحديث النشاط",
+    "cancel": "إلغاء",
+    "saving": "جارٍ الحفظ...",
+    "saved": "تم الحفظ ✓",
+    "errorDuration": "أدخل مدة صحيحة بالدقائق",
+    "errorCustomName": "اكتب اسم النشاط",
+    "errorGeneric": "صار خطأ، حاول مرة ثانية"
   }
 }

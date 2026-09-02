@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { saveWorkout } from '@/lib/actions/workouts';
+import { saveWorkout, updateWorkoutSession } from '@/lib/actions/workouts';
 import { saveRoutineFromSession } from '@/lib/actions/routines';
 import { CategoryIcon, getExerciseCategory, getOrderedCategories, type CategorySlug } from '@/lib/categories';
 import { displayUnitToKg, kgToDisplayUnit, type WeightUnit } from '@/lib/units';
@@ -26,7 +26,7 @@ type LoggedSet = {
   reps: number;
 };
 
-type SessionExercise = {
+export type SessionExercise = {
   exercise: Exercise;
   sets: LoggedSet[];
   draftWeight: string;
@@ -48,6 +48,9 @@ type Props = {
   weightUnit: WeightUnit;
   routines: RoutineOption[];
   lastSetByExercise: Record<string, { weight: number; reps: number }>;
+  editingSessionId?: string;
+  initialSessionExercises?: SessionExercise[];
+  initialDurationMinutes?: number;
 };
 
 const OLDER_AGE_THRESHOLD = 45;
@@ -74,6 +77,9 @@ export default function WorkoutBuilder({
   weightUnit,
   routines,
   lastSetByExercise,
+  editingSessionId,
+  initialSessionExercises,
+  initialDurationMinutes,
 }: Props) {
   const isArabic = locale === 'ar';
   const t = useTranslations('workoutBuilder');
@@ -84,7 +90,10 @@ export default function WorkoutBuilder({
   const preferLowerImpactFirst = age !== null && age >= OLDER_AGE_THRESHOLD;
   const unitLabel = tUnits(weightUnit);
 
-  const [sessionExercises, setSessionExercises] = useState<SessionExercise[]>([]);
+  const [sessionExercises, setSessionExercises] = useState<SessionExercise[]>(
+    () => initialSessionExercises ?? []
+  );
+  const [editDuration, setEditDuration] = useState(() => String(initialDurationMinutes ?? 1));
   const [activeCategory, setActiveCategory] = useState<CategorySlug | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
@@ -262,6 +271,45 @@ export default function WorkoutBuilder({
     setSessionExercises((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function handleUpdateSetWeight(exerciseIndex: number, setIndex: number, rawValue: string) {
+    const parsed = parseFloat(rawValue);
+    if (Number.isNaN(parsed) || parsed < 0) return;
+    setSessionExercises((prev) =>
+      prev.map((se, i) =>
+        i !== exerciseIndex
+          ? se
+          : {
+              ...se,
+              sets: se.sets.map((s, j) =>
+                j !== setIndex ? s : { ...s, weight: displayUnitToKg(parsed, weightUnit) }
+              ),
+            }
+      )
+    );
+  }
+
+  function handleUpdateSetReps(exerciseIndex: number, setIndex: number, rawValue: string) {
+    const parsed = parseInt(rawValue, 10);
+    if (Number.isNaN(parsed) || parsed <= 0) return;
+    setSessionExercises((prev) =>
+      prev.map((se, i) =>
+        i !== exerciseIndex
+          ? se
+          : { ...se, sets: se.sets.map((s, j) => (j !== setIndex ? s : { ...s, reps: parsed })) }
+      )
+    );
+  }
+
+  function handleRemoveSet(exerciseIndex: number, setIndex: number) {
+    setSessionExercises((prev) =>
+      prev.map((se, i) => {
+        if (i !== exerciseIndex) return se;
+        const remaining = se.sets.filter((_, j) => j !== setIndex);
+        return { ...se, sets: remaining.map((s, idx) => ({ ...s, setNumber: idx + 1 })) };
+      })
+    );
+  }
+
   async function handleSave() {
     const flatSets = sessionExercises.flatMap((se) =>
       se.sets.map((s) => ({
@@ -280,12 +328,13 @@ export default function WorkoutBuilder({
     setErrorMsg(null);
     setSaving(true);
 
-    const durationMinutes = Math.max(
-      1,
-      Math.round((Date.now() - startTimeRef.current) / 60000)
-    );
+    const durationMinutes = editingSessionId
+      ? Math.max(1, parseInt(editDuration, 10) || 1)
+      : Math.max(1, Math.round((Date.now() - startTimeRef.current) / 60000));
 
-    const result = await saveWorkout({ sets: flatSets, durationMinutes });
+    const result = editingSessionId
+      ? await updateWorkoutSession(editingSessionId, { sets: flatSets, durationMinutes })
+      : await saveWorkout({ sets: flatSets, durationMinutes });
 
     if (!result.success) {
       setSaving(false);
@@ -293,7 +342,7 @@ export default function WorkoutBuilder({
       return;
     }
 
-    router.push(`/${locale}/dashboard`);
+    router.push(`/${locale}/${editingSessionId ? 'history' : 'dashboard'}`);
     router.refresh();
   }
 
@@ -347,13 +396,15 @@ export default function WorkoutBuilder({
       )}
 
       <a
-        href={`/${locale}/dashboard`}
+        href={`/${locale}/${editingSessionId ? 'history' : 'dashboard'}`}
         style={{ color: MUTED, fontSize: '14px', textDecoration: 'none' }}
       >
-        {t('back')}
+        {editingSessionId ? t('backToHistory') : t('back')}
       </a>
 
-      <h1 style={{ fontSize: '24px', fontWeight: 700, margin: '10px 0 20px' }}>{t('title')}</h1>
+      <h1 style={{ fontSize: '24px', fontWeight: 700, margin: '10px 0 20px' }}>
+        {editingSessionId ? t('editTitle') : t('title')}
+      </h1>
 
       {hiddenCount > 0 && (
         <p style={{ color: '#FBBF24', fontSize: '13px', marginBottom: '20px' }}>
@@ -552,23 +603,68 @@ export default function WorkoutBuilder({
                 <p style={{ color: MUTED, fontSize: '13px', margin: '10px 0' }}>{t('noSetsYet')}</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', margin: '10px 0' }}>
-                  {se.sets.map((s) => (
+                  {se.sets.map((s, setIndex) => (
                     <div
-                      key={s.setNumber}
+                      key={`${se.exercise.id}-${setIndex}`}
                       style={{
                         display: 'flex',
-                        gap: '14px',
+                        alignItems: 'center',
+                        gap: '10px',
                         fontSize: '14px',
                         color: '#D4D4D4',
                       }}
                     >
-                      <span style={{ color: MUTED, width: '48px' }}>
+                      <span style={{ color: MUTED, width: '48px', flexShrink: 0 }}>
                         {t('setNumberLabel', { n: s.setNumber })}
                       </span>
-                      <span>
-                        {kgToDisplayUnit(s.weight, weightUnit)} {unitLabel}
-                      </span>
-                      <span>× {s.reps}</span>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        defaultValue={kgToDisplayUnit(s.weight, weightUnit)}
+                        onBlur={(e) => handleUpdateSetWeight(index, setIndex, e.target.value)}
+                        style={{
+                          width: '64px',
+                          backgroundColor: '#0A0A0A',
+                          color: '#FFFFFF',
+                          border: `1px solid ${CARD_BORDER}`,
+                          borderRadius: '6px',
+                          padding: '4px 8px',
+                          fontSize: '14px',
+                        }}
+                      />
+                      <span style={{ color: MUTED }}>{unitLabel}</span>
+                      <span>×</span>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        defaultValue={s.reps}
+                        onBlur={(e) => handleUpdateSetReps(index, setIndex, e.target.value)}
+                        style={{
+                          width: '56px',
+                          backgroundColor: '#0A0A0A',
+                          color: '#FFFFFF',
+                          border: `1px solid ${CARD_BORDER}`,
+                          borderRadius: '6px',
+                          padding: '4px 8px',
+                          fontSize: '14px',
+                        }}
+                      />
+                      <button
+                        onClick={() => handleRemoveSet(index, setIndex)}
+                        aria-label={t('removeSet')}
+                        style={{
+                          marginInlineStart: 'auto',
+                          backgroundColor: 'transparent',
+                          color: MUTED,
+                          border: 'none',
+                          fontSize: '16px',
+                          lineHeight: 1,
+                          cursor: 'pointer',
+                          padding: '4px',
+                        }}
+                      >
+                        ×
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -711,6 +807,31 @@ export default function WorkoutBuilder({
         </div>
       )}
 
+      {editingSessionId && (
+        <div style={{ marginTop: '16px', maxWidth: '220px' }}>
+          <label style={{ display: 'block', fontSize: '13px', color: MUTED, marginBottom: '6px' }}>
+            {t('durationLabel')}
+          </label>
+          <input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            step="1"
+            value={editDuration}
+            onChange={(e) => setEditDuration(e.target.value)}
+            style={{
+              width: '100%',
+              backgroundColor: '#0A0A0A',
+              color: '#FFFFFF',
+              border: `1px solid ${CARD_BORDER}`,
+              borderRadius: '8px',
+              padding: '10px 12px',
+              fontSize: '14px',
+            }}
+          />
+        </div>
+      )}
+
       <div
         style={{
           position: 'fixed',
@@ -748,7 +869,7 @@ export default function WorkoutBuilder({
             opacity: saving ? 0.7 : 1,
           }}
         >
-          {saving ? t('saving') : t('save')}
+          {saving ? t('saving') : editingSessionId ? t('update') : t('save')}
         </button>
       </div>
     </div>

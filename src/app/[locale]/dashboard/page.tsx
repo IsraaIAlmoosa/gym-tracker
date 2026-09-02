@@ -240,21 +240,37 @@ export default async function DashboardPage({ params }: Props) {
         </p>
       </section>
 
-      <a
-        href={`/${locale}/workouts/new`}
-        style={{
-          display: 'inline-block',
-          backgroundColor: '#C4F82A',
-          color: '#0A0A0A',
-          fontWeight: 700,
-          padding: '14px 28px',
-          borderRadius: '10px',
-          textDecoration: 'none',
-          marginBottom: '40px',
-        }}
-      >
-        {t('startWorkout')}
-      </a>
+      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '40px' }}>
+        <a
+          href={`/${locale}/workouts/new`}
+          style={{
+            display: 'inline-block',
+            backgroundColor: '#C4F82A',
+            color: '#0A0A0A',
+            fontWeight: 700,
+            padding: '14px 28px',
+            borderRadius: '10px',
+            textDecoration: 'none',
+          }}
+        >
+          {t('startWorkout')}
+        </a>
+        <a
+          href={`/${locale}/activities/new`}
+          style={{
+            display: 'inline-block',
+            backgroundColor: 'transparent',
+            color: '#C4F82A',
+            fontWeight: 700,
+            padding: '14px 28px',
+            borderRadius: '10px',
+            border: '1px solid #C4F82A',
+            textDecoration: 'none',
+          }}
+        >
+          {t('logActivity')}
+        </a>
+      </div>
 
       <div
         style={{

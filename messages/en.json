@@ -21,6 +21,7 @@
     "signOut": "Sign out",
     "setsLabel": "sets",
     "minutesLabel": "min",
+    "logActivity": "Log a timed activity",
     "viewFullHistory": "View full history →",
     "streakTitle": "Last 28 days",
     "streakCount": "Trained {n} of {days} days",
@@ -30,7 +31,11 @@
   },
   "workoutBuilder": {
     "title": "New Workout",
+    "editTitle": "Edit Workout",
     "back": "← Back to dashboard",
+    "backToHistory": "← Back to history",
+    "durationLabel": "Duration (minutes)",
+    "update": "Update workout",
     "backToCategories": "← All categories",
     "pickCategory": "Choose a muscle group",
     "hiddenNote": "{n, plural, one {# exercise} other {# exercises}} hidden based on your avoided-areas settings",
@@ -45,6 +50,7 @@
     "totalSetsCount": "{n, plural, one {# Set} other {# Sets}}",
     "noSetsYet": "No sets logged for this exercise yet",
     "remove": "Remove",
+    "removeSet": "Remove set",
     "restTitle": "Rest time",
     "skipRest": "Skip",
     "save": "Save workout",
@@ -160,7 +166,12 @@
     "noSessions": "You haven't logged any workout sessions yet.",
     "noSessionsInRange": "No sessions in this date range.",
     "setsLabel": "sets",
-    "minutesLabel": "min"
+    "minutesLabel": "min",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteSessionConfirm": "Delete this workout session?",
+    "deleteActivityConfirm": "Delete this activity?",
+    "deleteError": "Something went wrong deleting, try again"
   },
   "units": {
     "kg": "kg",
@@ -177,5 +188,31 @@
     "start": "Start",
     "progress": "Progress",
     "settings": "Settings"
+  },
+  "activityTypes": {
+    "yoga": "Yoga",
+    "pilates": "Pilates",
+    "tai_chi": "Tai Chi",
+    "walking": "Walking",
+    "other": "Other"
+  },
+  "activities": {
+    "title": "Log Activity",
+    "back": "← Back to dashboard"
+  },
+  "activityForm": {
+    "date": "Date",
+    "activityType": "Activity type",
+    "customActivityName": "Activity name",
+    "duration": "Duration (minutes)",
+    "notes": "Notes (optional)",
+    "save": "Save activity",
+    "update": "Update activity",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "saved": "Saved ✓",
+    "errorDuration": "Enter a valid duration in minutes",
+    "errorCustomName": "Enter the activity name",
+    "errorGeneric": "Something went wrong, try again"
   }
 }

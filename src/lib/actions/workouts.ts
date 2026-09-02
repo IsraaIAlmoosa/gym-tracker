@@ -64,3 +64,78 @@ export async function saveWorkout(
 
   return { success: true, sessionId: session.id as string };
 }
+
+export async function updateWorkoutSession(
+  sessionId: string,
+  input: SaveWorkoutInput
+): Promise<SaveWorkoutResult> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: 'not_authenticated' };
+  }
+
+  if (input.sets.length === 0) {
+    return { success: false, error: 'no_sets' };
+  }
+
+  const { error: updateError } = await supabase
+    .from('workout_sessions')
+    .update({ duration: input.durationMinutes })
+    .eq('id', sessionId);
+
+  if (updateError) {
+    return { success: false, error: updateError.message };
+  }
+
+  const { error: deleteError } = await supabase
+    .from('workout_sets')
+    .delete()
+    .eq('session_id', sessionId);
+
+  if (deleteError) {
+    return { success: false, error: deleteError.message };
+  }
+
+  const rows = input.sets.map((s) => ({
+    session_id: sessionId,
+    exercise_id: s.exerciseId,
+    set_number: s.setNumber,
+    weight: s.weight,
+    reps: s.reps,
+  }));
+
+  const { error: insertError } = await supabase.from('workout_sets').insert(rows);
+
+  if (insertError) {
+    return { success: false, error: insertError.message };
+  }
+
+  return { success: true, sessionId };
+}
+
+type DeleteWorkoutSessionResult = { success: true } | { success: false; error: string };
+
+export async function deleteWorkoutSession(id: string): Promise<DeleteWorkoutSessionResult> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: 'not_authenticated' };
+  }
+
+  const { error } = await supabase.from('workout_sessions').delete().eq('id', id);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}

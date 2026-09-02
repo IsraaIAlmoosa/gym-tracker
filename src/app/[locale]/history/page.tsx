@@ -2,18 +2,17 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
 import LoadErrorNotice from '@/components/LoadErrorNotice';
-import { kgToDisplayUnit, type WeightUnit } from '@/lib/units';
+import type { WeightUnit } from '@/lib/units';
+import HistoryManager, {
+  type ActivityRow,
+  type DateGroup,
+  type ExerciseSets,
+  type SessionRow,
+} from '@/components/HistoryManager';
 
 type Props = {
   params: Promise<{ locale: string }>;
   searchParams: Promise<{ from?: string; to?: string }>;
-};
-
-type SessionRow = {
-  id: string;
-  date: string;
-  duration: number | null;
-  created_at: string;
 };
 
 type ExerciseNameRow = { name_ar: string; name_en: string };
@@ -25,16 +24,6 @@ type SetRow = {
   weight: number;
   reps: number;
   exercises: ExerciseNameRow | ExerciseNameRow[] | null;
-};
-
-type ExerciseSets = {
-  name: string;
-  sets: { setNumber: number; weight: number; reps: number }[];
-};
-
-type DateGroup = {
-  date: string;
-  sessions: { session: SessionRow; exercises: ExerciseSets[] }[];
 };
 
 export default async function HistoryPage({ params, searchParams }: Props) {
@@ -98,34 +87,42 @@ export default async function HistoryPage({ params, searchParams }: Props) {
     }
   }
 
-  if (profileError || sessionsError || setsError) {
+  let activitiesQuery = supabase
+    .from('activity_sessions')
+    .select('id, activity_type, custom_activity_name, duration_minutes, session_date, notes')
+    .order('session_date', { ascending: false });
+
+  if (from) activitiesQuery = activitiesQuery.gte('session_date', from);
+  if (to) activitiesQuery = activitiesQuery.lte('session_date', to);
+
+  const { data: activities, error: activitiesError } = await activitiesQuery;
+
+  if (profileError || sessionsError || setsError || activitiesError) {
     return <LoadErrorNotice locale={locale} />;
   }
 
   const weightUnit = (profile?.preferred_weight_unit ?? 'kg') as WeightUnit;
-  const tUnits = await getTranslations({ locale, namespace: 'units' });
-  const unitLabel = tUnits(weightUnit);
+  const activityList: ActivityRow[] = activities ?? [];
 
-  const groups: DateGroup[] = [];
+  const groupsByDate = new Map<string, DateGroup>();
+  function getGroup(date: string): DateGroup {
+    let group = groupsByDate.get(date);
+    if (!group) {
+      group = { date, sessions: [], activities: [] };
+      groupsByDate.set(date, group);
+    }
+    return group;
+  }
+
   for (const session of sessionList) {
     const exercises = exercisesBySession[session.id] ?? [];
-    const lastGroup = groups[groups.length - 1];
-    if (lastGroup && lastGroup.date === session.date) {
-      lastGroup.sessions.push({ session, exercises });
-    } else {
-      groups.push({ date: session.date, sessions: [{ session, exercises }] });
-    }
+    getGroup(session.date).sessions.push({ session, exercises });
+  }
+  for (const activity of activityList) {
+    getGroup(activity.session_date).activities.push(activity);
   }
 
-  function formatDateHeading(dateStr: string) {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString(isArabic ? 'ar' : 'en', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-  }
+  const groups = Array.from(groupsByDate.values()).sort((a, b) => (a.date < b.date ? 1 : -1));
 
   const hasFilter = Boolean(from || to);
 
@@ -235,99 +232,7 @@ export default async function HistoryPage({ params, searchParams }: Props) {
         )}
       </form>
 
-      {groups.length === 0 ? (
-        <p style={{ color: '#A3A3A3', fontSize: '14px' }}>
-          {hasFilter ? t('noSessionsInRange') : t('noSessions')}
-        </p>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {groups.map((group) => (
-            <div key={group.date}>
-              <h2
-                style={{
-                  fontSize: '14px',
-                  fontWeight: 700,
-                  color: '#C4F82A',
-                  margin: '0 0 10px',
-                }}
-              >
-                {formatDateHeading(group.date)}
-              </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {group.sessions.map(({ session, exercises }) => {
-                  const totalSets = exercises.reduce((sum, e) => sum + e.sets.length, 0);
-                  return (
-                    <div
-                      key={session.id}
-                      style={{
-                        backgroundColor: '#171717',
-                        border: '1px solid #262626',
-                        borderRadius: '12px',
-                        padding: '16px 20px',
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          fontSize: '13px',
-                          color: '#A3A3A3',
-                          marginBottom: '12px',
-                        }}
-                      >
-                        <span>
-                          {totalSets} {t('setsLabel')}
-                        </span>
-                        {session.duration && (
-                          <span>
-                            {session.duration} {t('minutesLabel')}
-                          </span>
-                        )}
-                      </div>
-                      {exercises.length > 0 && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          {exercises.map((ex) => (
-                            <div key={ex.name}>
-                              <div
-                                style={{ fontSize: '14px', fontWeight: 600, marginBottom: '4px' }}
-                              >
-                                {ex.name}
-                              </div>
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  flexWrap: 'wrap',
-                                  gap: '8px',
-                                  fontSize: '13px',
-                                  color: '#D4D4D4',
-                                }}
-                              >
-                                {ex.sets.map((s) => (
-                                  <span
-                                    key={s.setNumber}
-                                    style={{
-                                      backgroundColor: '#0A0A0A',
-                                      border: '1px solid #262626',
-                                      borderRadius: '6px',
-                                      padding: '3px 8px',
-                                    }}
-                                  >
-                                    {kgToDisplayUnit(s.weight, weightUnit)} {unitLabel} × {s.reps}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <HistoryManager groups={groups} weightUnit={weightUnit} hasFilter={hasFilter} />
     </div>
   );
 }
