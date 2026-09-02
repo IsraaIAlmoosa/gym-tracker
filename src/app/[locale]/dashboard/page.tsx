@@ -13,6 +13,12 @@ import { TrophyIcon } from '@/components/ui/icons';
 import { kgToDisplayUnit, type WeightUnit } from '@/lib/units';
 import { computeMetricDelta, mapInBodyRow, type InBodyRow } from '@/lib/inbody';
 import {
+  mapProgramRow,
+  resolveProgramName,
+  resolveProgramDayName,
+  type ProgramRow,
+} from '@/lib/programs';
+import {
   toLocalDateStr,
   getGreetingPeriod,
   calculateStreakDays,
@@ -58,6 +64,14 @@ type SetWithSessionDate = {
   exercises: ExerciseNameRow | ExerciseNameRow[] | null;
 };
 
+type EnrollmentRow = {
+  id: string;
+  program_id: string;
+  current_week: number;
+  current_day_index: number;
+  programs: ProgramRow | ProgramRow[] | null;
+};
+
 const DAYS_BACK = 28;
 
 function resolveOne<T>(value: T | T[] | null): T | null {
@@ -93,6 +107,7 @@ export default async function DashboardPage({ params }: Props) {
     { data: recentDatesRaw, error: recentDatesError },
     { data: measurementRows, error: measurementsError },
     { data: inbodyRows, error: inbodyError },
+    { data: enrollmentRows, error: enrollmentError },
   ] = await Promise.all([
     supabase.from('profiles').select('gender, preferred_weight_unit').eq('id', user.id).maybeSingle(),
     supabase
@@ -116,9 +131,25 @@ export default async function DashboardPage({ params }: Props) {
       )
       .order('measurement_date', { ascending: false })
       .limit(2),
+    supabase
+      .from('program_enrollments')
+      .select(
+        'id, program_id, current_week, current_day_index, programs(id, is_default, created_by_user_id, slug, category, name, name_ar, name_en, description, description_ar, description_en, duration_weeks, days_per_week)'
+      )
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+      .limit(1),
   ]);
 
-  if (profileError || sessionsError || allSetsError || recentDatesError || measurementsError || inbodyError) {
+  if (
+    profileError ||
+    sessionsError ||
+    allSetsError ||
+    recentDatesError ||
+    measurementsError ||
+    inbodyError ||
+    enrollmentError
+  ) {
     return <LoadErrorNotice locale={locale} />;
   }
 
@@ -126,6 +157,41 @@ export default async function DashboardPage({ params }: Props) {
   const genderKey = gender === 'female' ? 'female' : 'male';
   const weightUnit = (profileRow?.preferred_weight_unit ?? 'kg') as WeightUnit;
   const displayName = user.email?.split('@')[0] ?? t('defaultName', { gender: genderKey });
+
+  const enrollmentRaw = ((enrollmentRows ?? []) as unknown as EnrollmentRow[])[0] ?? null;
+  const activeProgramInfo = enrollmentRaw ? resolveOne(enrollmentRaw.programs) : null;
+
+  let activeProgram: {
+    enrollmentId: string;
+    programName: string;
+    currentWeek: number;
+    durationWeeks: number;
+    currentDayName: string;
+  } | null = null;
+
+  if (enrollmentRaw && activeProgramInfo) {
+    const mappedProgram = mapProgramRow(activeProgramInfo);
+    const { data: currentDayRaw } = await supabase
+      .from('program_days')
+      .select('name, name_ar, name_en')
+      .eq('program_id', enrollmentRaw.program_id)
+      .eq('day_index', enrollmentRaw.current_day_index)
+      .maybeSingle();
+
+    activeProgram = {
+      enrollmentId: enrollmentRaw.id,
+      programName: resolveProgramName(mappedProgram, isArabic),
+      currentWeek: enrollmentRaw.current_week,
+      durationWeeks: mappedProgram.durationWeeks,
+      currentDayName: currentDayRaw
+        ? resolveProgramDayName(
+            { name: currentDayRaw.name, nameAr: currentDayRaw.name_ar, nameEn: currentDayRaw.name_en },
+            isArabic,
+            mappedProgram.isDefault
+          )
+        : '',
+    };
+  }
 
   const sessionList: SessionRow[] = sessions ?? [];
   const sessionIds = sessionList.map((s) => s.id);
@@ -260,7 +326,31 @@ export default async function DashboardPage({ params }: Props) {
         <Button href="/exercises" variant="ghost">
           {t('exercisesLink')}
         </Button>
+        <Button href="/programs" variant="ghost">
+          {t('programsLink')}
+        </Button>
       </div>
+
+      {activeProgram && (
+        <Card
+          className="mb-6"
+          title={t('activeProgramTitle')}
+          action={
+            <Link href="/programs" className="text-xs text-accent no-underline">
+              {t('viewProgress')}
+            </Link>
+          }
+        >
+          <p className="m-0 mb-1 text-base font-bold text-text">{activeProgram.programName}</p>
+          <p className="m-0 mb-3 text-sm text-text-muted">
+            {t('activeProgramWeek', { current: activeProgram.currentWeek, total: activeProgram.durationWeeks })}
+            {activeProgram.currentDayName ? ` · ${activeProgram.currentDayName}` : ''}
+          </p>
+          <Button href={`/workouts/new?program=${activeProgram.enrollmentId}`} className="px-4 py-2 text-xs">
+            {t('continueProgram')}
+          </Button>
+        </Card>
+      )}
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {latestWeight !== null ? (

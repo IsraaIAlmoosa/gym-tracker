@@ -95,6 +95,16 @@ export function TrophyIcon({ color, size = 22 }: IconProps) {
   );
 }
 
+export function CalendarIcon({ color, size = 22 }: IconProps) {
+  return (
+    <svg {...common(size, color)}>
+      <rect x="3" y="5" width="18" height="16" rx="2" />
+      <path d="M3 10h18M8 3v4M16 3v4" />
+      <path d="M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01" />
+    </svg>
+  );
+}
+
 export function GlobeIcon({ color, size = 20 }: IconProps) {
   return (
     <svg {...common(size, color)}>

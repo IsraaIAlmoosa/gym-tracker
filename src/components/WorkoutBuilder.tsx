@@ -53,6 +53,11 @@ type Props = {
   editingSessionId?: string;
   initialSessionExercises?: SessionExercise[];
   initialDurationMinutes?: number;
+  programEnrollmentId?: string;
+  programDayId?: string;
+  programDayName?: string;
+  programWeekInfo?: { current: number; total: number };
+  programTargets?: Record<string, { sets: number | null; reps: string | null }>;
 };
 
 const OLDER_AGE_THRESHOLD = 45;
@@ -120,6 +125,11 @@ export default function WorkoutBuilder({
   editingSessionId,
   initialSessionExercises,
   initialDurationMinutes,
+  programEnrollmentId,
+  programDayId,
+  programDayName,
+  programWeekInfo,
+  programTargets,
 }: Props) {
   const isArabic = locale === 'ar';
   const t = useTranslations('workoutBuilder');
@@ -509,7 +519,12 @@ export default function WorkoutBuilder({
 
     const result = editingSessionId
       ? await updateWorkoutSession(editingSessionId, { sets: flatSets, durationMinutes })
-      : await saveWorkout({ sets: flatSets, durationMinutes });
+      : await saveWorkout({
+          sets: flatSets,
+          durationMinutes,
+          programEnrollmentId,
+          programDayId,
+        });
 
     if (!result.success) {
       setSaving(false);
@@ -517,7 +532,8 @@ export default function WorkoutBuilder({
       return;
     }
 
-    router.push(`/${locale}/${editingSessionId ? 'history' : 'dashboard'}`);
+    const destination = editingSessionId ? 'history' : programEnrollmentId ? 'programs' : 'dashboard';
+    router.push(`/${locale}/${destination}`);
     router.refresh();
   }
 
@@ -632,6 +648,27 @@ export default function WorkoutBuilder({
         <p style={{ color: MUTED, fontSize: '13px', margin: '0 0 16px', fontVariantNumeric: 'tabular-nums' }}>
           {t('sessionDuration', { time: formatClock(elapsedSeconds) })}
         </p>
+      )}
+
+      {programDayName && (
+        <div
+          style={{
+            backgroundColor: CARD_BG,
+            border: `1px solid ${CARD_BORDER}`,
+            borderRadius: '10px',
+            padding: '10px 14px',
+            marginBottom: '20px',
+            fontSize: '13px',
+          }}
+        >
+          <span style={{ color: ACCENT, fontWeight: 700 }}>{programDayName}</span>
+          {programWeekInfo && (
+            <span style={{ color: MUTED }}>
+              {' · '}
+              {t('programWeekLabel', { current: programWeekInfo.current, total: programWeekInfo.total })}
+            </span>
+          )}
+        </div>
       )}
 
       <div
@@ -855,6 +892,15 @@ export default function WorkoutBuilder({
                       })}
                     </p>
                   )}
+                  {(() => {
+                    const target = programTargets?.[se.exercise.id];
+                    if (!target?.sets || !target.reps) return null;
+                    return (
+                      <p style={{ color: MUTED, fontSize: '12px', margin: '4px 0 0' }}>
+                        {t('programTarget', { sets: target.sets, reps: target.reps })}
+                      </p>
+                    );
+                  })()}
                 </div>
                 <button
                   onClick={() => handleRemoveExercise(index)}

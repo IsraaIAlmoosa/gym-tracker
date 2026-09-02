@@ -1,6 +1,8 @@
 'use server';
 
 import { createClient } from '@/lib/supabase/server';
+import { advanceEnrollment } from '@/lib/programs';
+import { toLocalDateStr } from '@/lib/analytics';
 
 type SetInput = {
   exerciseId: string;
@@ -12,11 +14,45 @@ type SetInput = {
 type SaveWorkoutInput = {
   sets: SetInput[];
   durationMinutes: number;
+  programEnrollmentId?: string;
+  programDayId?: string;
 };
 
 type SaveWorkoutResult =
   | { success: true; sessionId: string }
   | { success: false; error: string };
+
+/** After logging a session tied to an active program, moves the enrollment to the next day/week (or completes it). */
+async function advanceProgramEnrollment(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  enrollmentId: string
+) {
+  const { data: enrollment } = await supabase
+    .from('program_enrollments')
+    .select('current_week, current_day_index, programs(days_per_week, duration_weeks)')
+    .eq('id', enrollmentId)
+    .single();
+
+  if (!enrollment) return;
+
+  const program = Array.isArray(enrollment.programs) ? enrollment.programs[0] : enrollment.programs;
+  if (!program) return;
+
+  const next = advanceEnrollment(
+    { currentWeek: enrollment.current_week, currentDayIndex: enrollment.current_day_index },
+    { daysPerWeek: program.days_per_week, durationWeeks: program.duration_weeks }
+  );
+
+  await supabase
+    .from('program_enrollments')
+    .update({
+      current_week: next.currentWeek,
+      current_day_index: next.currentDayIndex,
+      status: next.status,
+      ...(next.status === 'completed' ? { completed_at: toLocalDateStr(new Date()) } : {}),
+    })
+    .eq('id', enrollmentId);
+}
 
 export async function saveWorkout(
   input: SaveWorkoutInput
@@ -37,7 +73,12 @@ export async function saveWorkout(
 
   const { data: session, error: sessionError } = await supabase
     .from('workout_sessions')
-    .insert({ duration: input.durationMinutes })
+    .insert({
+      duration: input.durationMinutes,
+      ...(input.programEnrollmentId
+        ? { program_enrollment_id: input.programEnrollmentId, program_day_id: input.programDayId }
+        : {}),
+    })
     .select('id')
     .single();
 
@@ -60,6 +101,10 @@ export async function saveWorkout(
 
   if (setsError) {
     return { success: false, error: setsError.message };
+  }
+
+  if (input.programEnrollmentId) {
+    await advanceProgramEnrollment(supabase, input.programEnrollmentId);
   }
 
   return { success: true, sessionId: session.id as string };
