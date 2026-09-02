@@ -39,6 +39,18 @@ export function ProgressIcon({ color, size = 22 }: IconProps) {
   );
 }
 
+export function DumbbellIcon({ color, size = 22 }: IconProps) {
+  return (
+    <svg {...common(size, color)}>
+      <path d="M6.5 6.5l11 11" />
+      <path d="M4.5 4.5l4 4-2 2-4-4z" />
+      <path d="M19.5 19.5l-4-4 2-2 4 4z" />
+      <path d="M2.5 8.5l2-2" />
+      <path d="M21.5 15.5l-2 2" />
+    </svg>
+  );
+}
+
 export function ScaleIcon({ color, size = 22 }: IconProps) {
   return (
     <svg {...common(size, color)}>
