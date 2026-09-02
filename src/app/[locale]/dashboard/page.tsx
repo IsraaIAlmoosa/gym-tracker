@@ -257,6 +257,9 @@ export default async function DashboardPage({ params }: Props) {
         <Button href="/goals" variant="ghost">
           {t('goalsLink')}
         </Button>
+        <Button href="/exercises" variant="ghost">
+          {t('exercisesLink')}
+        </Button>
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">

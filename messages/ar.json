@@ -41,6 +41,7 @@
     "minutesLabel": "د",
     "logActivity": "تسجيل نشاط بالمدة",
     "goalsLink": "الأهداف",
+    "exercisesLink": "التمارين",
     "viewProgress": "عرض التقدم ←",
     "viewFullHistory": "عرض كل السجل →",
     "streakTitle": "آخر 28 يوم",
@@ -400,5 +401,14 @@
     "errorTitle": "اكتب عنوان للهدف",
     "errorValues": "أدخل قيم بدائية ومستهدفة صحيحة",
     "errorGeneric": "صار خطأ، حاول مرة ثانية"
+  },
+  "exercises": {
+    "title": "مكتبة التمارين",
+    "subtitle": "{n, plural, zero {ما فيه تمارين} one {تمرين وحد متاح} two {تمرينين متاحين} few {# تمارين متاحة} many {# تمرين متاح} other {# تمرين متاح}}",
+    "searchPlaceholder": "ابحث عن تمرين...",
+    "allMuscleGroups": "كل المجموعات العضلية",
+    "allEquipment": "كل الأجهزة",
+    "allImpactLevels": "كل مستويات التأثير",
+    "noResults": "ما فيه تمارين مطابقة لهذه الفلاتر."
   }
 }

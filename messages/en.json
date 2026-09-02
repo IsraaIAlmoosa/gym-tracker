@@ -41,6 +41,7 @@
     "minutesLabel": "min",
     "logActivity": "Log a timed activity",
     "goalsLink": "Goals",
+    "exercisesLink": "Exercises",
     "viewProgress": "View progress →",
     "viewFullHistory": "View full history →",
     "streakTitle": "Last 28 days",
@@ -400,5 +401,14 @@
     "errorTitle": "Enter a title for your goal",
     "errorValues": "Enter valid starting and target values",
     "errorGeneric": "Something went wrong, try again"
+  },
+  "exercises": {
+    "title": "Exercise Library",
+    "subtitle": "{n, plural, one {# exercise} other {# exercises}} available",
+    "searchPlaceholder": "Search exercises...",
+    "allMuscleGroups": "All muscle groups",
+    "allEquipment": "All equipment",
+    "allImpactLevels": "All impact levels",
+    "noResults": "No exercises match these filters."
   }
 }
