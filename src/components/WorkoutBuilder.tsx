@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { saveWorkout, updateWorkoutSession } from '@/lib/actions/workouts';
 import { saveRoutineFromSession } from '@/lib/actions/routines';
 import { CategoryIcon, getExerciseCategory, getOrderedCategories, type CategorySlug } from '@/lib/categories';
 import { displayUnitToKg, kgToDisplayUnit, type WeightUnit } from '@/lib/units';
+import { TrophyIcon } from '@/components/ui/icons';
 
 type Exercise = {
   id: string;
@@ -48,6 +49,7 @@ type Props = {
   weightUnit: WeightUnit;
   routines: RoutineOption[];
   lastSetByExercise: Record<string, { weight: number; reps: number }>;
+  personalRecordByExercise: Record<string, { weight: number; reps: number }>;
   editingSessionId?: string;
   initialSessionExercises?: SessionExercise[];
   initialDurationMinutes?: number;
@@ -56,6 +58,16 @@ type Props = {
 const OLDER_AGE_THRESHOLD = 45;
 
 const REST_SECONDS_DEFAULT = 90;
+const REST_PRESETS = [60, 90, 120, 150];
+const REST_ADJUST_STEP = 15;
+const WEIGHT_STEP: Record<WeightUnit, number> = { kg: 2.5, lb: 5 };
+const REPS_STEP = 1;
+
+function formatClock(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
 
 const IMPACT_COLOR: Record<number, string> = {
   1: '#4ADE80',
@@ -68,6 +80,33 @@ const CARD_BG = '#171717';
 const CARD_BORDER = '#262626';
 const MUTED = '#737373';
 
+const restAdjustButtonStyle: CSSProperties = {
+  backgroundColor: '#262626',
+  color: '#FFFFFF',
+  border: 'none',
+  borderRadius: '8px',
+  padding: '6px 12px',
+  fontSize: '13px',
+  fontWeight: 600,
+  cursor: 'pointer',
+};
+
+const stepperButtonStyle: CSSProperties = {
+  width: '30px',
+  height: '30px',
+  flexShrink: 0,
+  backgroundColor: '#262626',
+  color: '#FFFFFF',
+  border: 'none',
+  borderRadius: '6px',
+  fontSize: '16px',
+  fontWeight: 700,
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
 export default function WorkoutBuilder({
   locale,
   exercises,
@@ -77,6 +116,7 @@ export default function WorkoutBuilder({
   weightUnit,
   routines,
   lastSetByExercise,
+  personalRecordByExercise,
   editingSessionId,
   initialSessionExercises,
   initialDurationMinutes,
@@ -86,6 +126,7 @@ export default function WorkoutBuilder({
   const tUnits = useTranslations('units');
   const router = useRouter();
   const startTimeRef = useRef<number | null>(null);
+  const sessionBestRef = useRef<Record<string, { weight: number; reps: number }>>({});
   useEffect(() => {
     if (startTimeRef.current === null) {
       startTimeRef.current = Date.now();
@@ -101,7 +142,16 @@ export default function WorkoutBuilder({
   const [editDuration, setEditDuration] = useState(() => String(initialDurationMinutes ?? 1));
   const [activeCategory, setActiveCategory] = useState<CategorySlug | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [restDuration, setRestDuration] = useState(REST_SECONDS_DEFAULT);
   const [restSeconds, setRestSeconds] = useState<number | null>(null);
+  const [restTotal, setRestTotal] = useState<number | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [prCelebration, setPrCelebration] = useState<{
+    exerciseName: string;
+    weightKg: number;
+    reps: number;
+    previousWeightKg: number;
+  } | null>(null);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showSaveRoutineForm, setShowSaveRoutineForm] = useState(false);
@@ -109,13 +159,71 @@ export default function WorkoutBuilder({
   const [savingRoutine, setSavingRoutine] = useState(false);
   const [routineSaveMsg, setRoutineSaveMsg] = useState<string | null>(null);
 
+  function playRestAlert() {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate([200, 100, 200]);
+    }
+    try {
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.2, ctx.currentTime);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.35);
+      osc.onended = () => ctx.close();
+    } catch {
+      // ignore — sound is a nice-to-have, not critical
+    }
+  }
+
   useEffect(() => {
     if (restSeconds === null) return;
+    if (restSeconds === 0) {
+      playRestAlert();
+      const timeout = setTimeout(() => {
+        setRestSeconds(null);
+        setRestTotal(null);
+      }, 1500);
+      return () => clearTimeout(timeout);
+    }
     const timeout = setTimeout(() => {
-      setRestSeconds((s) => (s !== null && s > 1 ? s - 1 : null));
+      setRestSeconds((s) => (s !== null ? s - 1 : null));
     }, 1000);
     return () => clearTimeout(timeout);
   }, [restSeconds]);
+
+  useEffect(() => {
+    if (editingSessionId) return;
+    const interval = setInterval(() => {
+      setElapsedSeconds(Math.round((Date.now() - (startTimeRef.current ?? Date.now())) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [editingSessionId]);
+
+  useEffect(() => {
+    if (!prCelebration) return;
+    const timeout = setTimeout(() => setPrCelebration(null), 4000);
+    return () => clearTimeout(timeout);
+  }, [prCelebration]);
+
+  function startRest() {
+    setRestSeconds(restDuration);
+    setRestTotal(restDuration);
+  }
+
+  function adjustRest(delta: number) {
+    setRestSeconds((s) => {
+      if (s === null) return s;
+      const next = Math.max(0, s + delta);
+      setRestTotal((total) => (total !== null && next > total ? next : total));
+      return next;
+    });
+  }
 
   const IMPACT_KEY: Record<number, 'low' | 'medium' | 'high'> = { 1: 'low', 2: 'medium', 3: 'high' };
   function impactLabelFor(level: number) {
@@ -245,27 +353,93 @@ export default function WorkoutBuilder({
     );
   }
 
+  function checkForPR(exercise: Exercise, newSet: LoggedSet) {
+    const serverBest = personalRecordByExercise[exercise.id];
+    const sessionBest = sessionBestRef.current[exercise.id];
+    const bestKnown = [serverBest, sessionBest].reduce<{ weight: number; reps: number } | undefined>(
+      (best, candidate) => {
+        if (!candidate) return best;
+        if (!best) return candidate;
+        if (candidate.weight > best.weight || (candidate.weight === best.weight && candidate.reps > best.reps)) {
+          return candidate;
+        }
+        return best;
+      },
+      undefined
+    );
+
+    if (
+      bestKnown &&
+      (newSet.weight > bestKnown.weight || (newSet.weight === bestKnown.weight && newSet.reps > bestKnown.reps))
+    ) {
+      setPrCelebration({
+        exerciseName: isArabic ? exercise.name_ar : exercise.name_en,
+        weightKg: newSet.weight,
+        reps: newSet.reps,
+        previousWeightKg: bestKnown.weight,
+      });
+    }
+
+    if (
+      !sessionBest ||
+      newSet.weight > sessionBest.weight ||
+      (newSet.weight === sessionBest.weight && newSet.reps > sessionBest.reps)
+    ) {
+      sessionBestRef.current[exercise.id] = { weight: newSet.weight, reps: newSet.reps };
+    }
+  }
+
+  function commitSet(index: number, weightKg: number, reps: number) {
+    const se = sessionExercises[index];
+    if (!se) return;
+    const newSet: LoggedSet = { setNumber: se.sets.length + 1, weight: weightKg, reps };
+
+    setSessionExercises((prev) =>
+      prev.map((s, i) =>
+        i !== index ? s : { ...s, sets: [...s.sets, newSet], draftWeight: '', draftReps: '' }
+      )
+    );
+
+    startRest();
+    checkForPR(se.exercise, newSet);
+  }
+
   function handleAddSet(index: number) {
+    const se = sessionExercises[index];
+    if (!se) return;
+    const enteredWeight = parseFloat(se.draftWeight);
+    const reps = parseInt(se.draftReps, 10);
+    if (Number.isNaN(enteredWeight) || Number.isNaN(reps) || reps <= 0) return;
+    commitSet(index, displayUnitToKg(enteredWeight, weightUnit), reps);
+  }
+
+  function handleRepeatLastSet(index: number) {
+    const se = sessionExercises[index];
+    if (!se || se.sets.length === 0) return;
+    const last = se.sets[se.sets.length - 1];
+    commitSet(index, last.weight, last.reps);
+  }
+
+  function adjustDraftWeight(index: number, delta: number) {
     setSessionExercises((prev) =>
       prev.map((se, i) => {
         if (i !== index) return se;
-        const enteredWeight = parseFloat(se.draftWeight);
-        const reps = parseInt(se.draftReps, 10);
-        if (Number.isNaN(enteredWeight) || Number.isNaN(reps) || reps <= 0) return se;
-        const newSet: LoggedSet = {
-          setNumber: se.sets.length + 1,
-          weight: displayUnitToKg(enteredWeight, weightUnit),
-          reps,
-        };
-        return {
-          ...se,
-          sets: [...se.sets, newSet],
-          draftWeight: '',
-          draftReps: '',
-        };
+        const current = parseFloat(se.draftWeight) || 0;
+        const next = Math.max(0, Math.round((current + delta) * 100) / 100);
+        return { ...se, draftWeight: String(next) };
       })
     );
-    setRestSeconds(REST_SECONDS_DEFAULT);
+  }
+
+  function adjustDraftReps(index: number, delta: number) {
+    setSessionExercises((prev) =>
+      prev.map((se, i) => {
+        if (i !== index) return se;
+        const current = parseInt(se.draftReps, 10) || 0;
+        const next = Math.max(0, current + delta);
+        return { ...se, draftReps: String(next) };
+      })
+    );
   }
 
   function handleRemoveExercise(index: number) {
@@ -371,28 +545,75 @@ export default function WorkoutBuilder({
             borderRadius: '12px',
             padding: '14px 20px',
             marginBottom: '20px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
           }}
         >
-          <span style={{ fontWeight: 700 }}>
-            {t('restTitle')}: {restSeconds}s
-          </span>
-          <button
-            onClick={() => setRestSeconds(null)}
+          <div
             style={{
-              backgroundColor: 'transparent',
-              color: ACCENT,
-              border: `1px solid ${ACCENT}`,
-              borderRadius: '8px',
-              padding: '6px 14px',
-              fontSize: '13px',
-              cursor: 'pointer',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: '10px',
             }}
           >
-            {t('skipRest')}
-          </button>
+            <span style={{ fontWeight: 700, fontSize: '15px' }}>{t('restTitle')}</span>
+            <span style={{ fontWeight: 700, fontSize: '24px', fontVariantNumeric: 'tabular-nums' }}>
+              {restSeconds === 0 ? t('restDone') : formatClock(restSeconds)}
+            </span>
+          </div>
+
+          <div
+            style={{
+              height: '4px',
+              borderRadius: '999px',
+              backgroundColor: CARD_BORDER,
+              overflow: 'hidden',
+              marginBottom: '12px',
+            }}
+          >
+            <div
+              style={{
+                height: '100%',
+                borderRadius: '999px',
+                backgroundColor: ACCENT,
+                width: `${restTotal ? Math.min(100, ((restTotal - restSeconds) / restTotal) * 100) : 0}%`,
+                transition: 'width 1s linear',
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={() => adjustRest(-REST_ADJUST_STEP)}
+                style={restAdjustButtonStyle}
+              >
+                −{REST_ADJUST_STEP}s
+              </button>
+              <button
+                onClick={() => adjustRest(REST_ADJUST_STEP)}
+                style={restAdjustButtonStyle}
+              >
+                +{REST_ADJUST_STEP}s
+              </button>
+            </div>
+            <button
+              onClick={() => {
+                setRestSeconds(null);
+                setRestTotal(null);
+              }}
+              style={{
+                backgroundColor: 'transparent',
+                color: ACCENT,
+                border: `1px solid ${ACCENT}`,
+                borderRadius: '8px',
+                padding: '6px 14px',
+                fontSize: '13px',
+                cursor: 'pointer',
+              }}
+            >
+              {t('skipRest')}
+            </button>
+          </div>
         </div>
       )}
 
@@ -403,9 +624,50 @@ export default function WorkoutBuilder({
         {editingSessionId ? t('backToHistory') : t('back')}
       </a>
 
-      <h1 style={{ fontSize: '24px', fontWeight: 700, margin: '10px 0 20px' }}>
+      <h1 style={{ fontSize: '24px', fontWeight: 700, margin: '10px 0 4px' }}>
         {editingSessionId ? t('editTitle') : t('title')}
       </h1>
+
+      {!editingSessionId && (
+        <p style={{ color: MUTED, fontSize: '13px', margin: '0 0 16px', fontVariantNumeric: 'tabular-nums' }}>
+          {t('sessionDuration', { time: formatClock(elapsedSeconds) })}
+        </p>
+      )}
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          marginBottom: '20px',
+          flexWrap: 'wrap',
+        }}
+      >
+        <span style={{ color: MUTED, fontSize: '13px' }}>{t('restDurationLabel')}</span>
+        <div style={{ display: 'flex', gap: '6px' }}>
+          {REST_PRESETS.map((preset) => {
+            const selected = preset === restDuration;
+            return (
+              <button
+                key={preset}
+                onClick={() => setRestDuration(preset)}
+                style={{
+                  backgroundColor: selected ? ACCENT : CARD_BG,
+                  color: selected ? '#0A0A0A' : '#FFFFFF',
+                  border: `1px solid ${selected ? ACCENT : CARD_BORDER}`,
+                  borderRadius: '999px',
+                  padding: '5px 12px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                {preset}s
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {hiddenCount > 0 && (
         <p style={{ color: '#FBBF24', fontSize: '13px', marginBottom: '20px' }}>
@@ -585,6 +847,14 @@ export default function WorkoutBuilder({
                       <span style={{ color: impactColor }}> · {impactLabel}</span>
                     )}
                   </p>
+                  {personalRecordByExercise[se.exercise.id] && (
+                    <p style={{ color: ACCENT, fontSize: '12px', margin: '4px 0 0', fontWeight: 600 }}>
+                      {t('currentRecord', {
+                        weight: kgToDisplayUnit(personalRecordByExercise[se.exercise.id].weight, weightUnit),
+                        unit: unitLabel,
+                      })}
+                    </p>
+                  )}
                 </div>
                 <button
                   onClick={() => handleRemoveExercise(index)}
@@ -671,7 +941,15 @@ export default function WorkoutBuilder({
                 </div>
               )}
 
-              <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '6px', marginTop: '12px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => adjustDraftWeight(index, -WEIGHT_STEP[weightUnit])}
+                  aria-label={t('decreaseWeight')}
+                  style={stepperButtonStyle}
+                >
+                  −
+                </button>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -679,7 +957,7 @@ export default function WorkoutBuilder({
                   value={se.draftWeight}
                   onChange={(e) => updateDraft(index, 'draftWeight', e.target.value)}
                   style={{
-                    flex: '1 1 100px',
+                    flex: '1 1 90px',
                     backgroundColor: '#0A0A0A',
                     color: '#FFFFFF',
                     border: `1px solid ${CARD_BORDER}`,
@@ -688,6 +966,23 @@ export default function WorkoutBuilder({
                     fontSize: '14px',
                   }}
                 />
+                <button
+                  type="button"
+                  onClick={() => adjustDraftWeight(index, WEIGHT_STEP[weightUnit])}
+                  aria-label={t('increaseWeight')}
+                  style={stepperButtonStyle}
+                >
+                  +
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => adjustDraftReps(index, -REPS_STEP)}
+                  aria-label={t('decreaseReps')}
+                  style={stepperButtonStyle}
+                >
+                  −
+                </button>
                 <input
                   type="number"
                   inputMode="numeric"
@@ -695,7 +990,7 @@ export default function WorkoutBuilder({
                   value={se.draftReps}
                   onChange={(e) => updateDraft(index, 'draftReps', e.target.value)}
                   style={{
-                    flex: '1 1 100px',
+                    flex: '1 1 70px',
                     backgroundColor: '#0A0A0A',
                     color: '#FFFFFF',
                     border: `1px solid ${CARD_BORDER}`,
@@ -704,6 +999,15 @@ export default function WorkoutBuilder({
                     fontSize: '14px',
                   }}
                 />
+                <button
+                  type="button"
+                  onClick={() => adjustDraftReps(index, REPS_STEP)}
+                  aria-label={t('increaseReps')}
+                  style={stepperButtonStyle}
+                >
+                  +
+                </button>
+
                 <button
                   onClick={() => handleAddSet(index)}
                   style={{
@@ -719,6 +1023,27 @@ export default function WorkoutBuilder({
                   {t('addSet')}
                 </button>
               </div>
+
+              {se.sets.length > 0 && (
+                <button
+                  onClick={() => handleRepeatLastSet(index)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: ACCENT,
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    padding: 0,
+                    marginTop: '10px',
+                  }}
+                >
+                  {t('repeatLastSet', {
+                    weight: kgToDisplayUnit(se.sets[se.sets.length - 1].weight, weightUnit),
+                    unit: unitLabel,
+                    reps: se.sets[se.sets.length - 1].reps,
+                  })}
+                </button>
+              )}
             </div>
           );
         })}
@@ -873,6 +1198,76 @@ export default function WorkoutBuilder({
           {saving ? t('saving') : editingSessionId ? t('update') : t('save')}
         </button>
       </div>
+
+      {prCelebration && (
+        <div
+          onClick={() => setPrCelebration(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 50,
+            backgroundColor: 'rgba(0,0,0,0.75)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: CARD_BG,
+              border: `1px solid ${ACCENT}`,
+              borderRadius: '20px',
+              padding: '32px 24px',
+              maxWidth: '340px',
+              width: '100%',
+              textAlign: 'center',
+              animation: 'prPop 0.35s ease-out',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
+              <TrophyIcon color={ACCENT} size={48} />
+            </div>
+            <h2 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 6px', color: ACCENT }}>
+              {t('prCelebrationTitle')}
+            </h2>
+            <p style={{ fontSize: '16px', fontWeight: 600, margin: '0 0 4px' }}>
+              {prCelebration.exerciseName}
+            </p>
+            <p style={{ fontSize: '22px', fontWeight: 800, margin: '4px 0' }}>
+              {kgToDisplayUnit(prCelebration.weightKg, weightUnit)} {unitLabel} × {prCelebration.reps}
+            </p>
+            <p style={{ fontSize: '13px', color: MUTED, margin: '4px 0 20px' }}>
+              {t('prPreviousBest', {
+                weight: kgToDisplayUnit(prCelebration.previousWeightKg, weightUnit),
+                unit: unitLabel,
+              })}
+            </p>
+            <button
+              onClick={() => setPrCelebration(null)}
+              style={{
+                backgroundColor: ACCENT,
+                color: '#0A0A0A',
+                fontWeight: 700,
+                border: 'none',
+                borderRadius: '10px',
+                padding: '10px 28px',
+                fontSize: '14px',
+                cursor: 'pointer',
+              }}
+            >
+              {t('prCelebrationClose')}
+            </button>
+          </div>
+          <style>{`
+            @keyframes prPop {
+              from { transform: scale(0.85); opacity: 0; }
+              to { transform: scale(1); opacity: 1; }
+            }
+          `}</style>
+        </div>
+      )}
     </div>
   );
 }

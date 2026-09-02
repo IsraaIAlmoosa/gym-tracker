@@ -136,9 +136,14 @@ export default async function EditWorkoutPage({ params }: Props) {
   }));
 
   const lastSetByExercise: Record<string, { weight: number; reps: number }> = {};
+  const personalRecordByExercise: Record<string, { weight: number; reps: number }> = {};
   for (const row of (lastSetsRaw ?? []) as unknown as LastSetRow[]) {
     if (!lastSetByExercise[row.exercise_id]) {
       lastSetByExercise[row.exercise_id] = { weight: row.weight, reps: row.reps };
+    }
+    const record = personalRecordByExercise[row.exercise_id];
+    if (!record || row.weight > record.weight || (row.weight === record.weight && row.reps > record.reps)) {
+      personalRecordByExercise[row.exercise_id] = { weight: row.weight, reps: row.reps };
     }
   }
 
@@ -171,6 +176,7 @@ export default async function EditWorkoutPage({ params }: Props) {
       weightUnit={weightUnit}
       routines={routines}
       lastSetByExercise={lastSetByExercise}
+      personalRecordByExercise={personalRecordByExercise}
       editingSessionId={session.id}
       initialSessionExercises={initialSessionExercises}
       initialDurationMinutes={session.duration ?? 1}
