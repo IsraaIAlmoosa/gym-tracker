@@ -8,9 +8,19 @@
 -- Every exercise referenced here must already exist in `exercises`
 -- (seeded by 0007_exercises_equipment_seed.sql's default set).
 --
--- Not written to be safely re-runnable (unlike most other migrations) —
--- re-running would duplicate these rows, since default programs have no
--- natural unique key to upsert on. Only run once.
+-- Idempotent: each program insert targets the partial unique index on
+-- `programs.slug` below and does nothing on conflict. When a program insert
+-- is skipped this way, its `returning id` CTE produces no row, which
+-- naturally short-circuits the day/exercise inserts chained off of it — so
+-- re-running this file is safe and a no-op once the 5 programs already
+-- exist. Safe to use as-is when seeding a fresh project. On a project where
+-- 0015 already ran before this idempotency was added (i.e. duplicates
+-- already exist), run 0016_dedupe_default_programs.sql first — it cleans up
+-- the duplicates and then creates the same index (`if not exists`, so
+-- harmless if this file already created it).
+create unique index if not exists programs_slug_unique_idx
+  on public.programs (slug)
+  where slug is not null;
 
 -- ---------------------------------------------------------------------------
 -- Push Pull Legs
@@ -26,6 +36,7 @@ with new_program as (
     'A 6-day push/pull/legs split for lifters with some training experience.',
     6, 6
   )
+  on conflict (slug) where slug is not null do nothing
   returning id
 ),
 new_days as (
@@ -93,6 +104,7 @@ with new_program as (
     'A 4-day upper/lower split balancing strength and volume across the week.',
     8, 4
   )
+  on conflict (slug) where slug is not null do nothing
   returning id
 ),
 new_days as (
@@ -148,6 +160,7 @@ with new_program as (
     'A 3-day full-body program hitting every major muscle group each session.',
     8, 3
   )
+  on conflict (slug) where slug is not null do nothing
   returning id
 ),
 new_days as (
@@ -194,6 +207,7 @@ with new_program as (
     'A classic 5-day body-part split — one muscle group per day.',
     6, 5
   )
+  on conflict (slug) where slug is not null do nothing
   returning id
 ),
 new_days as (
@@ -249,6 +263,7 @@ with new_program as (
     'A simple 3-day full-body program for building a training habit and base strength.',
     8, 3
   )
+  on conflict (slug) where slug is not null do nothing
   returning id
 ),
 new_days as (
