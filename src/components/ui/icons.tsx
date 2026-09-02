@@ -39,6 +39,17 @@ export function ProgressIcon({ color, size = 22 }: IconProps) {
   );
 }
 
+export function ScaleIcon({ color, size = 22 }: IconProps) {
+  return (
+    <svg {...common(size, color)}>
+      <circle cx="12" cy="5" r="2" />
+      <path d="M12 7v14M4 21h16" />
+      <path d="M6 10l-3 6a5 5 0 0 0 6 0z" />
+      <path d="M18 10l-3 6a5 5 0 0 0 6 0z" />
+    </svg>
+  );
+}
+
 export function SettingsIcon({ color, size = 22 }: IconProps) {
   return (
     <svg {...common(size, color)}>

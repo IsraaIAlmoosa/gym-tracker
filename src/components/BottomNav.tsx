@@ -6,7 +6,7 @@ import {
   HomeIcon,
   HistoryIcon,
   PlusCircleIcon,
-  ProgressIcon,
+  ScaleIcon,
   SettingsIcon,
 } from './ui/icons';
 
@@ -25,7 +25,7 @@ export default function BottomNav() {
     { href: '/dashboard', label: t('home'), Icon: HomeIcon, active: pathname === '/' || pathname.startsWith('/dashboard') },
     { href: '/history', label: t('history'), Icon: HistoryIcon, active: pathname.startsWith('/history') },
     { href: '/workouts/new', label: t('start'), Icon: PlusCircleIcon, active: pathname.startsWith('/workouts') },
-    { href: '/measurements', label: t('progress'), Icon: ProgressIcon, active: pathname.startsWith('/measurements') },
+    { href: '/inbody', label: t('inbody'), Icon: ScaleIcon, active: pathname.startsWith('/inbody') },
     { href: '/settings', label: t('settings'), Icon: SettingsIcon, active: pathname.startsWith('/settings') },
   ];
 

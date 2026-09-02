@@ -11,6 +11,7 @@ import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
 import { TrophyIcon } from '@/components/ui/icons';
 import { kgToDisplayUnit, type WeightUnit } from '@/lib/units';
+import { computeMetricDelta, mapInBodyRow, type InBodyRow } from '@/lib/inbody';
 import {
   toLocalDateStr,
   getGreetingPeriod,
@@ -85,6 +86,7 @@ export default async function DashboardPage({ params }: Props) {
     { data: allSets, error: allSetsError },
     { data: recentDatesRaw, error: recentDatesError },
     { data: measurementRows, error: measurementsError },
+    { data: inbodyRows, error: inbodyError },
   ] = await Promise.all([
     supabase.from('profiles').select('gender, preferred_weight_unit').eq('id', user.id).maybeSingle(),
     supabase
@@ -101,9 +103,16 @@ export default async function DashboardPage({ params }: Props) {
       .select('measurement_date, weight_kg')
       .order('measurement_date', { ascending: false })
       .limit(2),
+    supabase
+      .from('inbody_measurements')
+      .select(
+        'id, measurement_date, height_cm, weight_kg, skeletal_muscle_mass_kg, body_fat_percentage, body_fat_mass_kg, bmi, basal_metabolic_rate_kcal, body_water_liters, visceral_fat_level, waist_hip_ratio, protein_mass_kg, mineral_mass_kg, segmental_data, notes'
+      )
+      .order('measurement_date', { ascending: false })
+      .limit(2),
   ]);
 
-  if (profileError || sessionsError || allSetsError || recentDatesError || measurementsError) {
+  if (profileError || sessionsError || allSetsError || recentDatesError || measurementsError || inbodyError) {
     return <LoadErrorNotice locale={locale} />;
   }
 
@@ -159,6 +168,22 @@ export default async function DashboardPage({ params }: Props) {
   const measurements = measurementRows ?? [];
   const latestWeight = measurements[0]?.weight_kg ?? null;
   const previousWeight = measurements[1]?.weight_kg ?? null;
+
+  const inbodyMeasurements = ((inbodyRows ?? []) as unknown as InBodyRow[]).map(mapInBodyRow);
+  const latestInBody = inbodyMeasurements[0] ?? null;
+  const previousInBody = inbodyMeasurements[1] ?? null;
+
+  const rawBodyFatDelta = latestInBody
+    ? computeMetricDelta(latestInBody, previousInBody, 'bodyFatPercentage')
+    : null;
+  const bodyFatDelta = rawBodyFatDelta ? { ...rawBodyFatDelta, text: `${rawBodyFatDelta.text}%` } : null;
+
+  const rawMuscleMassDelta = latestInBody
+    ? computeMetricDelta(latestInBody, previousInBody, 'skeletalMuscleMassKg', (kg) => kgToDisplayUnit(kg, weightUnit))
+    : null;
+  const muscleMassDelta = rawMuscleMassDelta
+    ? { ...rawMuscleMassDelta, text: `${rawMuscleMassDelta.text} ${weightUnit}` }
+    : null;
 
   function formatDate(dateStr: string) {
     return new Date(dateStr).toLocaleDateString(isArabic ? 'ar' : 'en', { day: 'numeric', month: 'short' });
@@ -228,13 +253,31 @@ export default async function DashboardPage({ params }: Props) {
           unit={t('daysUnit', { n: currentStreak })}
         />
 
-        <Card>
-          <EmptyState compact message={t('noInBodyBodyFat')} ctaLabel={t('addMeasurement')} ctaHref="/measurements" />
-        </Card>
+        {latestInBody?.bodyFatPercentage !== null && latestInBody?.bodyFatPercentage !== undefined ? (
+          <MetricCard
+            label={t('bodyFatLabel')}
+            value={latestInBody.bodyFatPercentage.toFixed(1)}
+            unit="%"
+            delta={bodyFatDelta ?? undefined}
+          />
+        ) : (
+          <Card>
+            <EmptyState compact message={t('noInBodyBodyFat')} ctaLabel={t('addMeasurement')} ctaHref="/inbody/new" />
+          </Card>
+        )}
 
-        <Card>
-          <EmptyState compact message={t('noInBodyMuscleMass')} ctaLabel={t('addMeasurement')} ctaHref="/measurements" />
-        </Card>
+        {latestInBody?.skeletalMuscleMassKg !== null && latestInBody?.skeletalMuscleMassKg !== undefined ? (
+          <MetricCard
+            label={t('muscleMassLabel')}
+            value={kgToDisplayUnit(latestInBody.skeletalMuscleMassKg, weightUnit)}
+            unit={weightUnit}
+            delta={muscleMassDelta ?? undefined}
+          />
+        ) : (
+          <Card>
+            <EmptyState compact message={t('noInBodyMuscleMass')} ctaLabel={t('addMeasurement')} ctaHref="/inbody/new" />
+          </Card>
+        )}
       </div>
 
       <Card
