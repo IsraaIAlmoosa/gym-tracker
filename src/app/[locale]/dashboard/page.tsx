@@ -18,11 +18,17 @@ import {
   calculateStreakDays,
   calculateConsecutiveStreak,
   detectInsights,
+  detectBodyCompositionInsight,
+  detectFrequencyInsight,
   computePersonalRecords,
   computeExerciseTrends,
   type WorkoutSetRow,
   type ExerciseInsight,
+  type BodyCompositionInsight,
+  type FrequencyInsight,
 } from '@/lib/analytics';
+
+type DashboardInsight = ExerciseInsight | BodyCompositionInsight | FrequencyInsight;
 
 type Props = {
   params: Promise<{ locale: string }>;
@@ -156,7 +162,7 @@ export default async function DashboardPage({ params }: Props) {
     })
     .filter((r): r is WorkoutSetRow => r !== null);
 
-  const insights: ExerciseInsight[] = detectInsights(flatSetRows).slice(0, 3);
+  const exerciseInsights: ExerciseInsight[] = detectInsights(flatSetRows).slice(0, 3);
   const personalRecords = computePersonalRecords(flatSetRows).slice(0, 5);
   const exerciseTrends = computeExerciseTrends(flatSetRows, 3);
 
@@ -185,28 +191,52 @@ export default async function DashboardPage({ params }: Props) {
     ? { ...rawMuscleMassDelta, text: `${rawMuscleMassDelta.text} ${weightUnit}` }
     : null;
 
+  const bodyCompositionInsight = latestInBody ? detectBodyCompositionInsight(latestInBody, previousInBody) : null;
+  const frequencyInsight = detectFrequencyInsight(trainedDates, todayMidnight);
+
+  const insights: DashboardInsight[] = [
+    ...exerciseInsights,
+    ...(bodyCompositionInsight ? [bodyCompositionInsight] : []),
+    ...(frequencyInsight ? [frequencyInsight] : []),
+  ];
+
   function formatDate(dateStr: string) {
     return new Date(dateStr).toLocaleDateString(isArabic ? 'ar' : 'en', { day: 'numeric', month: 'short' });
   }
 
   const greetingPeriod = getGreetingPeriod(now);
 
-  const insightTone: Record<ExerciseInsight['type'], 'gold' | 'good' | 'warn'> = {
-    pr: 'gold',
-    progress: 'good',
-    plateau: 'warn',
-  };
+  function insightTone(insight: DashboardInsight): 'gold' | 'good' | 'warn' | 'neutral' {
+    if (insight.type === 'pr') return 'gold';
+    if (insight.type === 'progress') return 'good';
+    if (insight.type === 'plateau') return 'warn';
+    if (insight.type === 'bodyComposition') return insight.positive ? 'good' : 'neutral';
+    return insight.direction === 'up' ? 'good' : 'neutral';
+  }
 
-  function insightMessage(insight: ExerciseInsight): string {
-    const weight = kgToDisplayUnit(insight.weight, weightUnit);
-    if (insight.type === 'pr') return t('insightPr', { name: insight.exerciseName, weight, unit: weightUnit });
-    if (insight.type === 'plateau')
-      return t('insightPlateau', { name: insight.exerciseName, weight, unit: weightUnit });
-    return t('insightProgress', {
-      name: insight.exerciseName,
-      weight,
-      previousWeight: kgToDisplayUnit(insight.previousWeight, weightUnit),
-      unit: weightUnit,
+  function insightMessage(insight: DashboardInsight): string {
+    if (insight.type === 'pr' || insight.type === 'plateau' || insight.type === 'progress') {
+      const weight = kgToDisplayUnit(insight.weight, weightUnit);
+      if (insight.type === 'pr') return t('insightPr', { name: insight.exerciseName, weight, unit: weightUnit });
+      if (insight.type === 'plateau')
+        return t('insightPlateau', { name: insight.exerciseName, weight, unit: weightUnit });
+      return t('insightProgress', {
+        name: insight.exerciseName,
+        weight,
+        previousWeight: kgToDisplayUnit(insight.previousWeight, weightUnit),
+        unit: weightUnit,
+      });
+    }
+    if (insight.type === 'bodyComposition') {
+      return t('insightBodyComposition', {
+        bodyFatDirection: insight.bodyFatDirection,
+        muscleDirection: insight.muscleDirection,
+      });
+    }
+    return t('insightFrequency', {
+      direction: insight.direction,
+      current: insight.currentCount,
+      previous: insight.previousCount,
     });
   }
 
@@ -223,6 +253,9 @@ export default async function DashboardPage({ params }: Props) {
         <Button href="/workouts/new">{t('startWorkout')}</Button>
         <Button href="/activities/new" variant="secondary">
           {t('logActivity')}
+        </Button>
+        <Button href="/goals" variant="ghost">
+          {t('goalsLink')}
         </Button>
       </div>
 
@@ -297,7 +330,14 @@ export default async function DashboardPage({ params }: Props) {
       </Card>
 
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card title={t('strengthProgressTitle')}>
+        <Card
+          title={t('strengthProgressTitle')}
+          action={
+            <Link href="/progress" className="text-xs text-accent no-underline">
+              {t('viewProgress')}
+            </Link>
+          }
+        >
           {exerciseTrends.length === 0 ? (
             <EmptyState compact message={t('strengthProgressEmpty')} />
           ) : (
@@ -368,7 +408,7 @@ export default async function DashboardPage({ params }: Props) {
             <div className="flex flex-col gap-3">
               {insights.map((insight, i) => (
                 <div key={i} className="flex items-start gap-2">
-                  <Badge tone={insightTone[insight.type]}>{t(`insightType.${insight.type}`)}</Badge>
+                  <Badge tone={insightTone(insight)}>{t(`insightType.${insight.type}`)}</Badge>
                   <p className="m-0 text-[13px] leading-relaxed text-text-muted">{insightMessage(insight)}</p>
                 </div>
               ))}

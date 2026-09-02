@@ -32,18 +32,24 @@
     "insightType": {
       "pr": "PR",
       "plateau": "Plateau",
-      "progress": "Progress"
+      "progress": "Progress",
+      "bodyComposition": "Body composition",
+      "frequency": "Frequency"
     },
     "signOut": "Sign out",
     "setsLabel": "sets",
     "minutesLabel": "min",
     "logActivity": "Log a timed activity",
+    "goalsLink": "Goals",
+    "viewProgress": "View progress →",
     "viewFullHistory": "View full history →",
     "streakTitle": "Last 28 days",
     "streakCount": "Trained {n} of {days} days",
     "insightPr": "🏆 New PR on {name}! You lifted {weight} {unit} — your all-time best",
     "insightPlateau": "Plateau on {name} — same weight ({weight} {unit}) for the last two sessions. Try adding weight or reps",
-    "insightProgress": "Progress! You lifted {weight} {unit} on {name} (up from {previousWeight} {unit} last time)"
+    "insightProgress": "Progress! You lifted {weight} {unit} on {name} (up from {previousWeight} {unit} last time)",
+    "insightBodyComposition": "Body fat {bodyFatDirection, select, down {decreased} up {increased} other {stayed the same}} while muscle mass {muscleDirection, select, up {increased} down {decreased} other {stayed the same}} since your last InBody measurement",
+    "insightFrequency": "Your workout frequency {direction, select, up {increased} other {decreased}} — {current} sessions this week vs {previous} the week before"
   },
   "workoutBuilder": {
     "title": "New Workout",
@@ -324,5 +330,75 @@
     "compareA": "Measurement A",
     "compareB": "Measurement B",
     "compareSelectTwo": "Select two different measurements to compare."
+  },
+  "progress": {
+    "title": "Progress",
+    "bodyProgressTitle": "Body Progress",
+    "bodyProgressEmpty": "No InBody data yet. Add a measurement to see your body composition trend here.",
+    "addInBody": "Add InBody measurement",
+    "strengthProgressTitle": "Strength Progress",
+    "strengthProgressEmpty": "Log a few sessions of the same exercise to see your strength trend here.",
+    "trainingProgressTitle": "Training Progress",
+    "windowLabel": "Last {n} days",
+    "totalVolume": "Total Volume",
+    "totalSets": "Total Sets",
+    "totalReps": "Total Reps",
+    "sessionsPerWeek": "Sessions / Week",
+    "avgDuration": "Avg Duration",
+    "minutesUnit": "min",
+    "personalRecordsTitle": "Personal Records",
+    "personalRecordsEmpty": "Your personal records will show up here once you log some sets."
+  },
+  "goals": {
+    "title": "Goals",
+    "addNew": "Add Goal",
+    "addFirst": "Add your first goal",
+    "empty": "You haven't set any goals yet. Add one to start tracking your progress toward it.",
+    "noActive": "No active goals right now.",
+    "current": "Current",
+    "target": "Target",
+    "daysLeft": "{n, plural, one {# day left} other {# days left}}",
+    "overdue": "{n, plural, one {overdue by # day} other {overdue by # days}}",
+    "markComplete": "Mark complete",
+    "abandon": "Abandon",
+    "abandonConfirm": "Abandon this goal? You can't undo this.",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirm": "Delete this goal?",
+    "hidePast": "Hide past goals",
+    "showPast": "Show past goals ({n})",
+    "status": {
+      "active": "Active",
+      "completed": "Completed",
+      "abandoned": "Abandoned"
+    },
+    "types": {
+      "weight": "Body weight",
+      "body_fat_percentage": "Body fat %",
+      "exercise_max_weight": "Exercise max weight",
+      "workout_frequency": "Workout frequency",
+      "custom": "Custom"
+    }
+  },
+  "goalForm": {
+    "addTitle": "Add Goal",
+    "editTitle": "Edit Goal",
+    "goalType": "Goal type",
+    "exercise": "Exercise",
+    "title": "Title",
+    "titlePlaceholder": "e.g. Lose 5 kg",
+    "unit": "Unit",
+    "unitPlaceholder": "e.g. reps, km, sessions",
+    "startValue": "Starting value",
+    "targetValue": "Target value",
+    "currentValue": "Current value",
+    "targetDate": "Target date (optional)",
+    "sessionsPerWeekUnit": "sessions/week",
+    "save": "Save goal",
+    "update": "Update goal",
+    "saving": "Saving...",
+    "errorTitle": "Enter a title for your goal",
+    "errorValues": "Enter valid starting and target values",
+    "errorGeneric": "Something went wrong, try again"
   }
 }

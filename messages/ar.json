@@ -32,17 +32,23 @@
     "insightType": {
       "pr": "رقم قياسي",
       "plateau": "ركود",
-      "progress": "تقدم"
+      "progress": "تقدم",
+      "bodyComposition": "تركيبة الجسم",
+      "frequency": "الانتظام"
     },
     "signOut": "تسجيل خروج",
     "setsLabel": "مجموعة",
     "minutesLabel": "د",
     "logActivity": "تسجيل نشاط بالمدة",
+    "goalsLink": "الأهداف",
+    "viewProgress": "عرض التقدم ←",
     "viewFullHistory": "عرض كل السجل →",
     "streakTitle": "آخر 28 يوم",
     "streakCount": "تمرنت {n} يوم من {days}",
     "insightPr": "🏆 رقم قياسي جديد بـ{name}! رفعت {weight} {unit} — أعلى وزن ليك بهذا التمرين",
     "insightPlateau": "ركود بـ{name} — نفس الوزن ({weight} {unit}) آخر مرتين. جرب تزيد الوزن أو التكرارات",
+    "insightBodyComposition": "نسبة الدهون {bodyFatDirection, select, down {نقصت} up {زادت} other {ثابتة}} والكتلة العضلية {muscleDirection, select, up {زادت} down {نقصت} other {ثابتة}} من آخر قياس تحليل جسم",
+    "insightFrequency": "معدل تمارينك {direction, select, up {زاد} other {نقص}} — {current} جلسات هذا الأسبوع مقابل {previous} الأسبوع الماضي",
     "insightProgress": "تقدم! رفعت {weight} {unit} بـ{name} (كان {previousWeight} {unit} آخر مرة)"
   },
   "workoutBuilder": {
@@ -324,5 +330,75 @@
     "compareA": "القياس أ",
     "compareB": "القياس ب",
     "compareSelectTwo": "اختر قياسين مختلفين للمقارنة."
+  },
+  "progress": {
+    "title": "التقدم",
+    "bodyProgressTitle": "تقدم الجسم",
+    "bodyProgressEmpty": "لا توجد بيانات تحليل جسم بعد. أضف قياس حتى تشوف تطور تركيبة جسمك هنا.",
+    "addInBody": "إضافة قياس تحليل جسم",
+    "strengthProgressTitle": "تقدم القوة",
+    "strengthProgressEmpty": "سجل بضع جلسات لنفس التمرين لترى تطور قوتك هنا.",
+    "trainingProgressTitle": "تقدم التمرين",
+    "windowLabel": "آخر {n} يوم",
+    "totalVolume": "إجمالي الحجم",
+    "totalSets": "إجمالي المجموعات",
+    "totalReps": "إجمالي التكرارات",
+    "sessionsPerWeek": "جلسات / أسبوع",
+    "avgDuration": "متوسط المدة",
+    "minutesUnit": "د",
+    "personalRecordsTitle": "الأرقام القياسية",
+    "personalRecordsEmpty": "راح تظهر أرقامك القياسية هنا بعد ما تسجل بعض المجموعات."
+  },
+  "goals": {
+    "title": "الأهداف",
+    "addNew": "إضافة هدف",
+    "addFirst": "أضف أول هدف",
+    "empty": "لسا ما حطيت أي هدف. أضف هدف حتى تبدأ تتبع تقدمك نحوه.",
+    "noActive": "ما فيه أهداف نشطة حالياً.",
+    "current": "الحالي",
+    "target": "الهدف",
+    "daysLeft": "{n, plural, zero {بقي أقل من يوم} one {بقي يوم} two {بقي يومين} few {بقي # أيام} many {بقي # يوماً} other {بقي # يوم}}",
+    "overdue": "{n, plural, zero {متأخر} one {متأخر بيوم} two {متأخر بيومين} few {متأخر بـ# أيام} many {متأخر بـ# يوماً} other {متأخر بـ# يوم}}",
+    "markComplete": "وسمه كمُنجز",
+    "abandon": "تخلَّ عنه",
+    "abandonConfirm": "متأكد تبي تتخلى عن هذا الهدف؟ ما تقدر ترجعه.",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "deleteConfirm": "متأكد تبي تحذف هذا الهدف؟",
+    "hidePast": "إخفاء الأهداف السابقة",
+    "showPast": "عرض الأهداف السابقة ({n})",
+    "status": {
+      "active": "نشط",
+      "completed": "مُنجز",
+      "abandoned": "متروك"
+    },
+    "types": {
+      "weight": "وزن الجسم",
+      "body_fat_percentage": "نسبة الدهون",
+      "exercise_max_weight": "أقصى وزن لتمرين",
+      "workout_frequency": "انتظام التمارين",
+      "custom": "مخصص"
+    }
+  },
+  "goalForm": {
+    "addTitle": "إضافة هدف",
+    "editTitle": "تعديل الهدف",
+    "goalType": "نوع الهدف",
+    "exercise": "التمرين",
+    "title": "العنوان",
+    "titlePlaceholder": "مثال: أنزل 5 كغم",
+    "unit": "الوحدة",
+    "unitPlaceholder": "مثال: تكرار، كم، جلسات",
+    "startValue": "القيمة البدائية",
+    "targetValue": "القيمة المستهدفة",
+    "currentValue": "القيمة الحالية",
+    "targetDate": "تاريخ مستهدف (اختياري)",
+    "sessionsPerWeekUnit": "جلسة/أسبوع",
+    "save": "حفظ الهدف",
+    "update": "تحديث الهدف",
+    "saving": "جارٍ الحفظ...",
+    "errorTitle": "اكتب عنوان للهدف",
+    "errorValues": "أدخل قيم بدائية ومستهدفة صحيحة",
+    "errorGeneric": "صار خطأ، حاول مرة ثانية"
   }
 }

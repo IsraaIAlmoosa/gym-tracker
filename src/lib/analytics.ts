@@ -1,3 +1,5 @@
+import { computeMetricDelta, type InBodyMeasurement } from '@/lib/inbody';
+
 export function toLocalDateStr(d: Date): string {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -159,4 +161,76 @@ export function computeExerciseTrends(rows: WorkoutSetRow[], topN = 3): Exercise
     .filter((trend) => trend.points.length >= 2)
     .sort((a, b) => b.points.length - a.points.length)
     .slice(0, topN);
+}
+
+/** Total training volume (Σ weight × reps) across the given sets. */
+export function calculateTotalVolume(rows: WorkoutSetRow[]): number {
+  return rows.reduce((sum, r) => sum + r.weight * r.reps, 0);
+}
+
+/** Average sessions per 7-day period over the given trailing window. */
+export function calculateWorkoutFrequency(sessionDates: string[], daysBack: number): number {
+  if (daysBack <= 0) return 0;
+  const weeks = daysBack / 7;
+  return sessionDates.length / weeks;
+}
+
+export type BodyCompositionInsight = {
+  type: 'bodyComposition';
+  bodyFatDirection: 'up' | 'down' | 'flat';
+  muscleDirection: 'up' | 'down' | 'flat';
+  positive: boolean;
+};
+
+/**
+ * Factual body-composition observation from the two most recent InBody entries.
+ * Only returned when at least one of body fat % / muscle mass has a comparable
+ * previous value — never fabricates a trend from a single data point.
+ */
+export function detectBodyCompositionInsight(
+  latest: InBodyMeasurement,
+  previous: InBodyMeasurement | null
+): BodyCompositionInsight | null {
+  if (!previous) return null;
+
+  const fatDelta = computeMetricDelta(latest, previous, 'bodyFatPercentage');
+  const muscleDelta = computeMetricDelta(latest, previous, 'skeletalMuscleMassKg');
+  if (!fatDelta && !muscleDelta) return null;
+
+  const positives = [fatDelta?.positive, muscleDelta?.positive].filter(
+    (p): p is boolean => p !== undefined
+  );
+  if (positives.length === 0) return null;
+
+  return {
+    type: 'bodyComposition',
+    bodyFatDirection: fatDelta?.direction ?? 'flat',
+    muscleDirection: muscleDelta?.direction ?? 'flat',
+    positive: positives.every(Boolean),
+  };
+}
+
+export type FrequencyInsight = {
+  type: 'frequency';
+  currentCount: number;
+  previousCount: number;
+  direction: 'up' | 'down';
+};
+
+/** Compares trained-day count in the last 7 days vs. the 7 days before that. */
+export function detectFrequencyInsight(trainedDates: Set<string>, today: Date): FrequencyInsight | null {
+  const currentCount = calculateStreakDays(trainedDates, 7, today).filter((d) => d.trained).length;
+
+  const previousWeekEnd = new Date(today);
+  previousWeekEnd.setDate(previousWeekEnd.getDate() - 7);
+  const previousCount = calculateStreakDays(trainedDates, 7, previousWeekEnd).filter((d) => d.trained).length;
+
+  if (currentCount === previousCount) return null;
+
+  return {
+    type: 'frequency',
+    currentCount,
+    previousCount,
+    direction: currentCount > previousCount ? 'up' : 'down',
+  };
 }
