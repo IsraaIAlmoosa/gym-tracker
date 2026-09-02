@@ -3,21 +3,35 @@
     "name": "متتبع الجيم",
     "description": "تطبيق بسيط لتتبع تمارينك في الجيم"
   },
-  "nav": {
-    "home": "الرئيسية",
-    "workouts": "التمارين",
-    "history": "السجل",
-    "settings": "الإعدادات"
-  },
   "dashboard": {
-    "welcome": "أهلاً، {name} 👋",
+    "greeting": {
+      "morning": "صباح الخير، {name} 👋",
+      "afternoon": "نهارك سعيد، {name} 👋",
+      "evening": "مساء الخير، {name} 👋"
+    },
     "defaultName": "{gender, select, female {بطلة} other {بطل}}",
     "subtitle": "{gender, select, female {جاهزة لتبدئي تمرين اليوم؟} other {جاهز لتبدأ تمرين اليوم؟}}",
     "startWorkout": "ابدأ تمرين جديد",
+    "weightLabel": "الوزن",
+    "streakLabel": "سلسلة التمارين",
+    "daysUnit": "{n, plural, zero {أيام} one {يوم} two {يومين} few {أيام} many {يوماً} other {أيام}}",
+    "noInBodyData": "لا توجد بيانات تحليل الجسم بعد",
+    "noInBodyBodyFat": "نسبة الدهون — لا توجد بيانات بعد",
+    "noInBodyMuscleMass": "الكتلة العضلية — لا توجد بيانات بعد",
+    "addMeasurement": "أضف قياس",
+    "strengthProgressTitle": "تقدم القوة",
+    "strengthProgressEmpty": "سجل بضع جلسات لنفس التمرين لترى تطور قوتك هنا.",
+    "personalRecordsTitle": "الأرقام القياسية",
+    "personalRecordsEmpty": "راح تظهر أرقامك القياسية هنا بعد ما تسجل بعض المجموعات.",
     "recentSessions": "آخر التمارين",
     "noSessions": "لسا ما سجلت أي تمرين. ابدأ أول جلسة وراح تظهر هنا.",
     "insights": "التحليل الذكي",
     "insightsPlaceholder": "راح تظهر هنا ملاحظات (زي كشف الركود) بعد ما تسجل كم تمرين.",
+    "insightType": {
+      "pr": "رقم قياسي",
+      "plateau": "ركود",
+      "progress": "تقدم"
+    },
     "signOut": "تسجيل خروج",
     "setsLabel": "مجموعة",
     "minutesLabel": "د",
@@ -25,9 +39,9 @@
     "viewFullHistory": "عرض كل السجل →",
     "streakTitle": "آخر 28 يوم",
     "streakCount": "تمرنت {n} يوم من {days}",
-    "insightPr": "🏆 رقم قياسي جديد بـ{name}! رفعت {weight} كغم — أعلى وزن ليك بهذا التمرين",
-    "insightPlateau": "ركود بـ{name} — نفس الوزن ({weight} كغم) آخر مرتين. جرب تزيد الوزن أو التكرارات",
-    "insightProgress": "تقدم! رفعت {weight} كغم بـ{name} (كان {previousWeight} كغم آخر مرة)"
+    "insightPr": "🏆 رقم قياسي جديد بـ{name}! رفعت {weight} {unit} — أعلى وزن ليك بهذا التمرين",
+    "insightPlateau": "ركود بـ{name} — نفس الوزن ({weight} {unit}) آخر مرتين. جرب تزيد الوزن أو التكرارات",
+    "insightProgress": "تقدم! رفعت {weight} {unit} بـ{name} (كان {previousWeight} {unit} آخر مرة)"
   },
   "workoutBuilder": {
     "title": "تسجيل تمرين جديد",

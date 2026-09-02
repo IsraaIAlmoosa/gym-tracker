@@ -4,7 +4,8 @@ import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { Geist, Geist_Mono } from "next/font/google";
 import { routing } from "@/i18n/routing";
-import { NavBar } from "@/components/nav-bar";
+import Sidebar from "@/components/Sidebar";
+import TopBar from "@/components/TopBar";
 import { RegisterServiceWorker } from "@/components/register-sw";
 import BottomNav from "@/components/BottomNav";
 import "../globals.css";
@@ -52,7 +53,7 @@ export async function generateMetadata({
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0f172a",
+  themeColor: "#0A0A0A",
 };
 
 export default async function LocaleLayout({
@@ -78,11 +79,12 @@ export default async function LocaleLayout({
       dir={dir}
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-zinc-50 dark:bg-black">
+      <body className="min-h-full flex flex-col bg-bg text-text">
         <NextIntlClientProvider>
           <RegisterServiceWorker />
-          <NavBar />
-          <main className="flex-1 flex flex-col">{children}</main>
+          <Sidebar />
+          <TopBar />
+          <main className="flex-1 flex flex-col lg:ps-64">{children}</main>
           <BottomNav />
         </NextIntlClientProvider>
       </body>

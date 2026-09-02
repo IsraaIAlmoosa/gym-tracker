@@ -2,103 +2,16 @@
 
 import { Link, usePathname } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
+import {
+  HomeIcon,
+  HistoryIcon,
+  PlusCircleIcon,
+  ProgressIcon,
+  SettingsIcon,
+} from './ui/icons';
 
 const ACTIVE_COLOR = '#C4F82A';
 const INACTIVE_COLOR = '#737373';
-
-function HomeIcon({ color }: { color: string }) {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 11l9-8 9 8" />
-      <path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" />
-    </svg>
-  );
-}
-
-function HistoryIcon({ color }: { color: string }) {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 12a9 9 0 1 0 3-6.7" />
-      <path d="M3 4v5h5" />
-      <path d="M12 8v4l3 3" />
-    </svg>
-  );
-}
-
-function ProgressIcon({ color }: { color: string }) {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M3 17l6-6 4 4 8-8" />
-      <path d="M21 7v6h-6" />
-    </svg>
-  );
-}
-
-function SettingsIcon({ color }: { color: string }) {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke={color}
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z" />
-    </svg>
-  );
-}
-
-function PlusCircleIcon({ color, filled }: { color: string; filled: boolean }) {
-  return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-      <circle
-        cx="12"
-        cy="12"
-        r="10"
-        fill={filled ? color : 'none'}
-        stroke={color}
-        strokeWidth="2"
-      />
-      <path
-        d="M12 8v8M8 12h8"
-        stroke={filled ? '#0A0A0A' : color}
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -108,113 +21,31 @@ export default function BottomNav() {
     return null;
   }
 
-  const isHome = pathname === '/' || pathname.startsWith('/dashboard');
-  const isHistory = pathname.startsWith('/history');
-  const isWorkout = pathname.startsWith('/workouts');
-  const isProgress = pathname.startsWith('/measurements');
-  const isSettings = pathname.startsWith('/settings');
+  const items = [
+    { href: '/dashboard', label: t('home'), Icon: HomeIcon, active: pathname === '/' || pathname.startsWith('/dashboard') },
+    { href: '/history', label: t('history'), Icon: HistoryIcon, active: pathname.startsWith('/history') },
+    { href: '/workouts/new', label: t('start'), Icon: PlusCircleIcon, active: pathname.startsWith('/workouts') },
+    { href: '/measurements', label: t('progress'), Icon: ProgressIcon, active: pathname.startsWith('/measurements') },
+    { href: '/settings', label: t('settings'), Icon: SettingsIcon, active: pathname.startsWith('/settings') },
+  ];
 
   return (
     <nav
-      style={{
-        position: 'fixed',
-        bottom: 0,
-        insetInlineStart: 0,
-        insetInlineEnd: 0,
-        height: '64px',
-        backgroundColor: '#0A0A0A',
-        borderTop: '1px solid #262626',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-around',
-        zIndex: 20,
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
-      }}
+      className="fixed bottom-0 start-0 end-0 z-20 flex h-16 items-center justify-around border-t border-border bg-bg lg:hidden"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
     >
-      <Link
-        href="/dashboard"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '2px',
-          textDecoration: 'none',
-          color: isHome ? ACTIVE_COLOR : INACTIVE_COLOR,
-          fontSize: '11px',
-          fontWeight: isHome ? 700 : 400,
-        }}
-      >
-        <HomeIcon color={isHome ? ACTIVE_COLOR : INACTIVE_COLOR} />
-        {t('home')}
-      </Link>
-
-      <Link
-        href="/history"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '2px',
-          textDecoration: 'none',
-          color: isHistory ? ACTIVE_COLOR : INACTIVE_COLOR,
-          fontSize: '11px',
-          fontWeight: isHistory ? 700 : 400,
-        }}
-      >
-        <HistoryIcon color={isHistory ? ACTIVE_COLOR : INACTIVE_COLOR} />
-        {t('history')}
-      </Link>
-
-      <Link
-        href="/workouts/new"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '2px',
-          textDecoration: 'none',
-          color: isWorkout ? ACTIVE_COLOR : INACTIVE_COLOR,
-          fontSize: '11px',
-          fontWeight: isWorkout ? 700 : 400,
-        }}
-      >
-        <PlusCircleIcon color={isWorkout ? ACTIVE_COLOR : INACTIVE_COLOR} filled={isWorkout} />
-        {t('start')}
-      </Link>
-
-      <Link
-        href="/measurements"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '2px',
-          textDecoration: 'none',
-          color: isProgress ? ACTIVE_COLOR : INACTIVE_COLOR,
-          fontSize: '11px',
-          fontWeight: isProgress ? 700 : 400,
-        }}
-      >
-        <ProgressIcon color={isProgress ? ACTIVE_COLOR : INACTIVE_COLOR} />
-        {t('progress')}
-      </Link>
-
-      <Link
-        href="/settings"
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '2px',
-          textDecoration: 'none',
-          color: isSettings ? ACTIVE_COLOR : INACTIVE_COLOR,
-          fontSize: '11px',
-          fontWeight: isSettings ? 700 : 400,
-        }}
-      >
-        <SettingsIcon color={isSettings ? ACTIVE_COLOR : INACTIVE_COLOR} />
-        {t('settings')}
-      </Link>
+      {items.map(({ href, label, Icon, active }) => (
+        <Link
+          key={href}
+          href={href}
+          className={`flex flex-col items-center gap-0.5 text-[11px] no-underline ${
+            active ? 'font-bold text-accent' : 'font-normal text-text-faint'
+          }`}
+        >
+          <Icon color={active ? ACTIVE_COLOR : INACTIVE_COLOR} filled={href === '/workouts/new' && active} />
+          {label}
+        </Link>
+      ))}
     </nav>
   );
 }

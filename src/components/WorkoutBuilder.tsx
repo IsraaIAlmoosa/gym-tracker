@@ -85,7 +85,12 @@ export default function WorkoutBuilder({
   const t = useTranslations('workoutBuilder');
   const tUnits = useTranslations('units');
   const router = useRouter();
-  const startTimeRef = useRef<number>(Date.now());
+  const startTimeRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (startTimeRef.current === null) {
+      startTimeRef.current = Date.now();
+    }
+  }, []);
   const orderedCategories = getOrderedCategories(gender);
   const preferLowerImpactFirst = age !== null && age >= OLDER_AGE_THRESHOLD;
   const unitLabel = tUnits(weightUnit);
@@ -106,12 +111,8 @@ export default function WorkoutBuilder({
 
   useEffect(() => {
     if (restSeconds === null) return;
-    if (restSeconds <= 0) {
-      setRestSeconds(null);
-      return;
-    }
     const timeout = setTimeout(() => {
-      setRestSeconds((s) => (s !== null ? s - 1 : null));
+      setRestSeconds((s) => (s !== null && s > 1 ? s - 1 : null));
     }, 1000);
     return () => clearTimeout(timeout);
   }, [restSeconds]);
@@ -330,7 +331,7 @@ export default function WorkoutBuilder({
 
     const durationMinutes = editingSessionId
       ? Math.max(1, parseInt(editDuration, 10) || 1)
-      : Math.max(1, Math.round((Date.now() - startTimeRef.current) / 60000));
+      : Math.max(1, Math.round((Date.now() - (startTimeRef.current ?? Date.now())) / 60000));
 
     const result = editingSessionId
       ? await updateWorkoutSession(editingSessionId, { sets: flatSets, durationMinutes })

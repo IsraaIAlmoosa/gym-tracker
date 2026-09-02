@@ -3,21 +3,35 @@
     "name": "Gym Tracker",
     "description": "A simple app to track your gym workouts"
   },
-  "nav": {
-    "home": "Home",
-    "workouts": "Workouts",
-    "history": "History",
-    "settings": "Settings"
-  },
   "dashboard": {
-    "welcome": "Welcome, {name} 👋",
+    "greeting": {
+      "morning": "Good morning, {name} 👋",
+      "afternoon": "Good afternoon, {name} 👋",
+      "evening": "Good evening, {name} 👋"
+    },
     "defaultName": "Champion",
     "subtitle": "Ready to start today's workout?",
     "startWorkout": "Start New Workout",
+    "weightLabel": "Weight",
+    "streakLabel": "Workout Streak",
+    "daysUnit": "{n, plural, one {day} other {days}}",
+    "noInBodyData": "No InBody data yet",
+    "noInBodyBodyFat": "Body Fat — no InBody data yet",
+    "noInBodyMuscleMass": "Muscle Mass — no InBody data yet",
+    "addMeasurement": "Add measurement",
+    "strengthProgressTitle": "Strength Progress",
+    "strengthProgressEmpty": "Log a few sessions of the same exercise to see your strength trend here.",
+    "personalRecordsTitle": "Personal Records",
+    "personalRecordsEmpty": "Your personal records will show up here once you log some sets.",
     "recentSessions": "Recent Sessions",
     "noSessions": "You haven't logged a workout yet. Start your first session and it'll show up here.",
     "insights": "Smart Insights",
     "insightsPlaceholder": "Insights (like plateau detection) will appear here once you've logged a few workouts.",
+    "insightType": {
+      "pr": "PR",
+      "plateau": "Plateau",
+      "progress": "Progress"
+    },
     "signOut": "Sign out",
     "setsLabel": "sets",
     "minutesLabel": "min",
@@ -25,9 +39,9 @@
     "viewFullHistory": "View full history →",
     "streakTitle": "Last 28 days",
     "streakCount": "Trained {n} of {days} days",
-    "insightPr": "🏆 New PR on {name}! You lifted {weight}kg — your all-time best",
-    "insightPlateau": "Plateau on {name} — same weight ({weight}kg) for the last two sessions. Try adding weight or reps",
-    "insightProgress": "Progress! You lifted {weight}kg on {name} (up from {previousWeight}kg last time)"
+    "insightPr": "🏆 New PR on {name}! You lifted {weight} {unit} — your all-time best",
+    "insightPlateau": "Plateau on {name} — same weight ({weight} {unit}) for the last two sessions. Try adding weight or reps",
+    "insightProgress": "Progress! You lifted {weight} {unit} on {name} (up from {previousWeight} {unit} last time)"
   },
   "workoutBuilder": {
     "title": "New Workout",

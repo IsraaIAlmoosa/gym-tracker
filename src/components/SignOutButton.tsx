@@ -3,13 +3,15 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import Button from './ui/Button';
 
 type Props = {
   label: string;
   locale: string;
+  className?: string;
 };
 
-export default function SignOutButton({ label, locale }: Props) {
+export default function SignOutButton({ label, locale, className = 'px-4 py-2 text-xs' }: Props) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
@@ -22,21 +24,8 @@ export default function SignOutButton({ label, locale }: Props) {
   };
 
   return (
-    <button
-      onClick={handleSignOut}
-      disabled={loading}
-      style={{
-        backgroundColor: 'transparent',
-        color: '#FFFFFF',
-        border: '1px solid #404040',
-        borderRadius: '8px',
-        padding: '8px 16px',
-        fontSize: '13px',
-        cursor: loading ? 'not-allowed' : 'pointer',
-        opacity: loading ? 0.6 : 1,
-      }}
-    >
+    <Button onClick={handleSignOut} disabled={loading} variant="ghost" className={className}>
       {loading ? '...' : label}
-    </button>
+    </Button>
   );
 }
