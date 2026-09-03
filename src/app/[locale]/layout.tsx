@@ -6,6 +6,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { routing } from "@/i18n/routing";
 import Sidebar from "@/components/Sidebar";
 import TopBar from "@/components/TopBar";
+import MainWrapper from "@/components/MainWrapper";
 import { RegisterServiceWorker } from "@/components/register-sw";
 import BottomNav from "@/components/BottomNav";
 import "../globals.css";
@@ -84,7 +85,7 @@ export default async function LocaleLayout({
           <RegisterServiceWorker />
           <Sidebar />
           <TopBar />
-          <main className="flex-1 flex flex-col lg:ps-64">{children}</main>
+          <MainWrapper>{children}</MainWrapper>
           <BottomNav />
         </NextIntlClientProvider>
       </body>

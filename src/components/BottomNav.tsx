@@ -2,6 +2,7 @@
 
 import { Link, usePathname } from '@/i18n/navigation';
 import { useTranslations } from 'next-intl';
+import { isNoAppChromeRoute } from '@/lib/chrome';
 import {
   HomeIcon,
   HistoryIcon,
@@ -19,11 +20,7 @@ export default function BottomNav() {
   const pathname = usePathname();
   const t = useTranslations('bottomNav');
 
-  if (
-    pathname.startsWith('/login') ||
-    pathname.startsWith('/auth') ||
-    pathname.startsWith('/reset-password')
-  ) {
+  if (isNoAppChromeRoute(pathname)) {
     return null;
   }
 

@@ -3,6 +3,7 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { Link, usePathname } from '@/i18n/navigation';
 import { routing } from '@/i18n/routing';
+import { isNoAppChromeRoute } from '@/lib/chrome';
 import SignOutButton from './SignOutButton';
 
 const localeLabels: Record<string, string> = {
@@ -15,11 +16,7 @@ export default function TopBar() {
   const locale = useLocale();
   const tSign = useTranslations('dashboard');
 
-  if (
-    pathname.startsWith('/login') ||
-    pathname.startsWith('/auth') ||
-    pathname.startsWith('/reset-password')
-  ) {
+  if (isNoAppChromeRoute(pathname)) {
     return null;
   }
 
