@@ -164,9 +164,10 @@ export default async function DashboardPage({ params }: Props) {
   const gender = (profileRow?.gender ?? null) as 'male' | 'female' | null;
   const genderKey = gender === 'female' ? 'female' : 'male';
   const weightUnit = (profileRow?.preferred_weight_unit ?? 'kg') as WeightUnit;
+  // Dashboard greeting is first-name-only by design — the full name is reserved for Profile.
   const displayName = resolveDisplayName(
     profileRow?.first_name ?? null,
-    profileRow?.last_name ?? null,
+    null,
     user.email,
     t('defaultName', { gender: genderKey })
   );
@@ -371,7 +372,8 @@ export default async function DashboardPage({ params }: Props) {
               {t('todayWorkoutTitle')}
             </span>
             <EmptyState
-              icon={<ClipboardIcon color="#737373" size={28} />}
+              tone="accent"
+              icon={<ClipboardIcon color="#C4F82A" size={28} />}
               message={t('noWorkoutPlanned')}
               ctaLabel={t('createWorkout')}
               ctaHref="/workouts/new"
@@ -413,31 +415,34 @@ export default async function DashboardPage({ params }: Props) {
       </div>
 
       {/* Quick Actions */}
-      <div className="mb-6 flex flex-wrap items-center gap-2">
-        <Button href="/workouts/new" className="px-4 py-2.5 text-xs">
-          {t('startWorkout')}
-        </Button>
-        <Button href="/measurements" variant="secondary" className="flex items-center gap-1.5 px-4 py-2.5 text-xs">
-          <ScaleIcon color="#C4F82A" size={16} />
-          {t('addMeasurement')}
-        </Button>
-        <Button href="/progress" variant="secondary" className="flex items-center gap-1.5 px-4 py-2.5 text-xs">
-          <ProgressIcon color="#C4F82A" size={16} />
-          {t('viewProgressCta')}
-        </Button>
-        <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
-        <Button href="/activities/new" variant="ghost" className="px-3 py-2 text-xs">
-          {t('logActivity')}
-        </Button>
-        <Button href="/goals" variant="ghost" className="px-3 py-2 text-xs">
-          {t('goalsLink')}
-        </Button>
-        <Button href="/exercises" variant="ghost" className="px-3 py-2 text-xs">
-          {t('exercisesLink')}
-        </Button>
-        <Button href="/programs" variant="ghost" className="px-3 py-2 text-xs">
-          {t('programsLink')}
-        </Button>
+      <div className="mb-6">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Button href="/workouts/new" className="px-5 py-2.5 text-sm">
+            {t('startWorkout')}
+          </Button>
+          <Button href="/measurements" variant="secondary" className="flex items-center gap-1.5 px-4 py-2.5 text-sm">
+            <ScaleIcon color="#C4F82A" size={16} />
+            {t('addMeasurement')}
+          </Button>
+          <Button href="/progress" variant="secondary" className="flex items-center gap-1.5 px-4 py-2.5 text-sm">
+            <ProgressIcon color="#C4F82A" size={16} />
+            {t('viewProgressCta')}
+          </Button>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          <Link href="/activities/new" className="text-xs text-text-faint no-underline hover:text-text-muted">
+            {t('logActivity')}
+          </Link>
+          <Link href="/goals" className="text-xs text-text-faint no-underline hover:text-text-muted">
+            {t('goalsLink')}
+          </Link>
+          <Link href="/exercises" className="text-xs text-text-faint no-underline hover:text-text-muted">
+            {t('exercisesLink')}
+          </Link>
+          <Link href="/programs" className="text-xs text-text-faint no-underline hover:text-text-muted">
+            {t('programsLink')}
+          </Link>
+        </div>
       </div>
 
       {/* Strength Progress */}

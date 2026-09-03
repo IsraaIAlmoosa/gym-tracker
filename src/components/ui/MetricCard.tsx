@@ -23,12 +23,12 @@ export default function MetricCard({ label, value, unit, delta, icon }: Props) {
 
   return (
     <div className="rounded-xl border border-border bg-surface p-4 transition-colors hover:border-text-faint/40">
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-2.5 flex items-center justify-between">
         <span className="text-xs font-medium text-text-muted">{label}</span>
         {icon}
       </div>
       <div className="flex items-baseline gap-1.5">
-        <span className="text-[28px] font-bold leading-none tracking-tight text-text lg:text-3xl">{value}</span>
+        <span className="text-[30px] font-bold leading-none tracking-tight text-text lg:text-[34px]">{value}</span>
         {unit && <span className="text-sm text-text-muted">{unit}</span>}
       </div>
       {delta && (
