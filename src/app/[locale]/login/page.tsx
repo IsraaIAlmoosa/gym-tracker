@@ -42,6 +42,11 @@ export default function LoginPage() {
   }
 
   const handleGoogleLogin = async () => {
+    // Must be set before redirecting to Google: the cookie survives the
+    // round trip (Google -> our own /auth/callback) since it's set on our
+    // origin, and the callback route's server-side Supabase client reads it
+    // the same way the password sign-in path does.
+    setRememberMePreference(rememberMe)
     const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider: 'google',
