@@ -9,9 +9,10 @@ import Button from '@/components/ui/Button';
 import MetricCard from '@/components/ui/MetricCard';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
-import { TrophyIcon } from '@/components/ui/icons';
+import { TrophyIcon, LightbulbIcon, ClipboardIcon, ScaleIcon, ProgressIcon } from '@/components/ui/icons';
 import { kgToDisplayUnit, type WeightUnit } from '@/lib/units';
-import { computeMetricDelta, mapInBodyRow, type InBodyRow } from '@/lib/inbody';
+import { resolveDisplayName } from '@/lib/profile';
+import { mapInBodyRow, type InBodyRow } from '@/lib/inbody';
 import {
   mapProgramRow,
   resolveProgramName,
@@ -20,7 +21,6 @@ import {
 } from '@/lib/programs';
 import {
   toLocalDateStr,
-  getGreetingPeriod,
   calculateStreakDays,
   calculateConsecutiveStreak,
   detectInsights,
@@ -32,6 +32,7 @@ import {
   type ExerciseInsight,
   type BodyCompositionInsight,
   type FrequencyInsight,
+  type StreakDay,
 } from '@/lib/analytics';
 
 type DashboardInsight = ExerciseInsight | BodyCompositionInsight | FrequencyInsight;
@@ -108,8 +109,13 @@ export default async function DashboardPage({ params }: Props) {
     { data: measurementRows, error: measurementsError },
     { data: inbodyRows, error: inbodyError },
     { data: enrollmentRows, error: enrollmentError },
+    { count: totalWorkoutsCount, error: totalWorkoutsError },
   ] = await Promise.all([
-    supabase.from('profiles').select('gender, preferred_weight_unit').eq('id', user.id).maybeSingle(),
+    supabase
+      .from('profiles')
+      .select('first_name, last_name, gender, preferred_weight_unit')
+      .eq('id', user.id)
+      .maybeSingle(),
     supabase
       .from('workout_sessions')
       .select('id, date, duration, created_at')
@@ -139,6 +145,7 @@ export default async function DashboardPage({ params }: Props) {
       .eq('status', 'active')
       .order('created_at', { ascending: false })
       .limit(1),
+    supabase.from('workout_sessions').select('id', { count: 'exact', head: true }),
   ]);
 
   if (
@@ -148,7 +155,8 @@ export default async function DashboardPage({ params }: Props) {
     recentDatesError ||
     measurementsError ||
     inbodyError ||
-    enrollmentError
+    enrollmentError ||
+    totalWorkoutsError
   ) {
     return <LoadErrorNotice locale={locale} />;
   }
@@ -156,40 +164,49 @@ export default async function DashboardPage({ params }: Props) {
   const gender = (profileRow?.gender ?? null) as 'male' | 'female' | null;
   const genderKey = gender === 'female' ? 'female' : 'male';
   const weightUnit = (profileRow?.preferred_weight_unit ?? 'kg') as WeightUnit;
-  const displayName = user.email?.split('@')[0] ?? t('defaultName', { gender: genderKey });
+  const displayName = resolveDisplayName(
+    profileRow?.first_name ?? null,
+    profileRow?.last_name ?? null,
+    user.email,
+    t('defaultName', { gender: genderKey })
+  );
 
+  // "Today's workout" is sourced from the user's active program day (the only
+  // real "planned for today" concept this app has) — no fake schedule data.
   const enrollmentRaw = ((enrollmentRows ?? []) as unknown as EnrollmentRow[])[0] ?? null;
   const activeProgramInfo = enrollmentRaw ? resolveOne(enrollmentRaw.programs) : null;
 
-  let activeProgram: {
+  let todaysWorkout: {
     enrollmentId: string;
     programName: string;
+    dayName: string;
+    exerciseCount: number;
     currentWeek: number;
     durationWeeks: number;
-    currentDayName: string;
   } | null = null;
 
   if (enrollmentRaw && activeProgramInfo) {
     const mappedProgram = mapProgramRow(activeProgramInfo);
     const { data: currentDayRaw } = await supabase
       .from('program_days')
-      .select('name, name_ar, name_en')
+      .select('name, name_ar, name_en, program_exercises(id)')
       .eq('program_id', enrollmentRaw.program_id)
       .eq('day_index', enrollmentRaw.current_day_index)
       .maybeSingle();
 
-    activeProgram = {
+    todaysWorkout = {
       enrollmentId: enrollmentRaw.id,
       programName: resolveProgramName(mappedProgram, isArabic),
-      currentWeek: enrollmentRaw.current_week,
-      durationWeeks: mappedProgram.durationWeeks,
-      currentDayName: currentDayRaw
+      dayName: currentDayRaw
         ? resolveProgramDayName(
             { name: currentDayRaw.name, nameAr: currentDayRaw.name_ar, nameEn: currentDayRaw.name_en },
             isArabic,
             mappedProgram.isDefault
           )
         : '',
+      exerciseCount: currentDayRaw?.program_exercises?.length ?? 0,
+      currentWeek: enrollmentRaw.current_week,
+      durationWeeks: mappedProgram.durationWeeks,
     };
   }
 
@@ -237,25 +254,32 @@ export default async function DashboardPage({ params }: Props) {
   const currentStreak = calculateConsecutiveStreak(trainedDates, todayMidnight);
   const trainedCountLast28 = streakDays.filter((d) => d.trained).length;
 
-  const measurements = measurementRows ?? [];
-  const latestWeight = measurements[0]?.weight_kg ?? null;
-  const previousWeight = measurements[1]?.weight_kg ?? null;
+  // Calendar-style grid: pad the front so columns line up on real weeks
+  // (rows = weekday, columns = week), regardless of page reading direction.
+  const firstWeekday = streakDays[0]?.date.getDay() ?? 0;
+  const heatmapCells: (StreakDay | null)[] = [
+    ...Array.from({ length: firstWeekday }, () => null),
+    ...streakDays,
+  ];
 
   const inbodyMeasurements = ((inbodyRows ?? []) as unknown as InBodyRow[]).map(mapInBodyRow);
   const latestInBody = inbodyMeasurements[0] ?? null;
   const previousInBody = inbodyMeasurements[1] ?? null;
 
-  const rawBodyFatDelta = latestInBody
-    ? computeMetricDelta(latestInBody, previousInBody, 'bodyFatPercentage')
-    : null;
-  const bodyFatDelta = rawBodyFatDelta ? { ...rawBodyFatDelta, text: `${rawBodyFatDelta.text}%` } : null;
-
-  const rawMuscleMassDelta = latestInBody
-    ? computeMetricDelta(latestInBody, previousInBody, 'skeletalMuscleMassKg', (kg) => kgToDisplayUnit(kg, weightUnit))
-    : null;
-  const muscleMassDelta = rawMuscleMassDelta
-    ? { ...rawMuscleMassDelta, text: `${rawMuscleMassDelta.text} ${weightUnit}` }
-    : null;
+  const measurements = measurementRows ?? [];
+  // Body-weight can come from either the plain measurements log or an InBody
+  // scan — merge both sources by date so the headline number and its delta
+  // both reflect whichever is most recent, regardless of which log it's in.
+  const weighIns = [
+    ...measurements
+      .filter((m): m is typeof m & { weight_kg: number } => m.weight_kg !== null)
+      .map((m) => ({ date: m.measurement_date, weight: m.weight_kg })),
+    ...inbodyMeasurements
+      .filter((m): m is typeof m & { weightKg: number } => m.weightKg !== null)
+      .map((m) => ({ date: m.measurementDate, weight: m.weightKg })),
+  ].sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+  const latestWeight = weighIns[0]?.weight ?? null;
+  const previousWeight = weighIns[1]?.weight ?? null;
 
   const bodyCompositionInsight = latestInBody ? detectBodyCompositionInsight(latestInBody, previousInBody) : null;
   const frequencyInsight = detectFrequencyInsight(trainedDates, todayMidnight);
@@ -269,8 +293,6 @@ export default async function DashboardPage({ params }: Props) {
   function formatDate(dateStr: string) {
     return new Date(dateStr).toLocaleDateString(isArabic ? 'ar' : 'en', { day: 'numeric', month: 'short' });
   }
-
-  const greetingPeriod = getGreetingPeriod(now);
 
   function insightTone(insight: DashboardInsight): 'gold' | 'good' | 'warn' | 'neutral' {
     if (insight.type === 'pr') return 'gold';
@@ -306,52 +328,59 @@ export default async function DashboardPage({ params }: Props) {
     });
   }
 
+  const totalWorkouts = totalWorkoutsCount ?? 0;
+  const lastWorkout = sessionList[0] ?? null;
+
   return (
     <div className="mx-auto w-full max-w-5xl px-4 py-6 pb-24 lg:px-8 lg:py-8 lg:pb-8">
-      <section className="mb-6">
-        <h1 className="m-0 mb-1 text-2xl font-bold text-text lg:text-3xl">
-          {t(`greeting.${greetingPeriod}`, { name: displayName })}
+      {/* Hero */}
+      <section className="mb-7">
+        <h1 className="m-0 mb-1.5 text-[26px] font-bold tracking-tight text-text lg:text-3xl">
+          {t('greeting', { name: displayName })}
         </h1>
         <p className="m-0 text-[15px] text-text-muted">{t('subtitle', { gender: genderKey })}</p>
       </section>
 
-      <div className="mb-6 flex flex-wrap gap-3">
-        <Button href="/workouts/new">{t('startWorkout')}</Button>
-        <Button href="/activities/new" variant="secondary">
-          {t('logActivity')}
-        </Button>
-        <Button href="/goals" variant="ghost">
-          {t('goalsLink')}
-        </Button>
-        <Button href="/exercises" variant="ghost">
-          {t('exercisesLink')}
-        </Button>
-        <Button href="/programs" variant="ghost">
-          {t('programsLink')}
-        </Button>
-      </div>
+      {/* Today's Workout */}
+      <Card className={`mb-6 ${todaysWorkout ? 'border-accent/25' : ''}`}>
+        {todaysWorkout ? (
+          <>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <span className="text-xs font-semibold uppercase tracking-wide text-accent">
+                {t('todayWorkoutTitle')}
+              </span>
+              <Badge tone="neutral">
+                {t('activeProgramWeek', { current: todaysWorkout.currentWeek, total: todaysWorkout.durationWeeks })}
+              </Badge>
+            </div>
+            <p className="m-0 mb-1 text-xl font-bold text-text lg:text-2xl">
+              {todaysWorkout.dayName || todaysWorkout.programName}
+            </p>
+            <p className="m-0 mb-5 text-sm text-text-muted">
+              {todaysWorkout.programName}
+              {' · '}
+              {t('exerciseCount', { n: todaysWorkout.exerciseCount })}
+            </p>
+            <Button href={`/workouts/new?program=${todaysWorkout.enrollmentId}`} className="w-full sm:w-auto">
+              {t('startTodayWorkout')}
+            </Button>
+          </>
+        ) : (
+          <>
+            <span className="mb-3 block text-xs font-semibold uppercase tracking-wide text-text-faint">
+              {t('todayWorkoutTitle')}
+            </span>
+            <EmptyState
+              icon={<ClipboardIcon color="#737373" size={28} />}
+              message={t('noWorkoutPlanned')}
+              ctaLabel={t('createWorkout')}
+              ctaHref="/workouts/new"
+            />
+          </>
+        )}
+      </Card>
 
-      {activeProgram && (
-        <Card
-          className="mb-6"
-          title={t('activeProgramTitle')}
-          action={
-            <Link href="/programs" className="text-xs text-accent no-underline">
-              {t('viewProgress')}
-            </Link>
-          }
-        >
-          <p className="m-0 mb-1 text-base font-bold text-text">{activeProgram.programName}</p>
-          <p className="m-0 mb-3 text-sm text-text-muted">
-            {t('activeProgramWeek', { current: activeProgram.currentWeek, total: activeProgram.durationWeeks })}
-            {activeProgram.currentDayName ? ` · ${activeProgram.currentDayName}` : ''}
-          </p>
-          <Button href={`/workouts/new?program=${activeProgram.enrollmentId}`} className="px-4 py-2 text-xs">
-            {t('continueProgram')}
-          </Button>
-        </Card>
-      )}
-
+      {/* Quick Stats */}
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {latestWeight !== null ? (
           <MetricCard
@@ -369,64 +398,54 @@ export default async function DashboardPage({ params }: Props) {
           />
         ) : (
           <Card>
-            <EmptyState compact message={t('noInBodyData')} ctaLabel={t('addMeasurement')} ctaHref="/measurements" />
+            <EmptyState compact message={t('noWeightData')} ctaLabel={t('addMeasurement')} ctaHref="/measurements" />
           </Card>
         )}
+
+        <MetricCard label={t('streakLabel')} value={currentStreak} unit={t('daysUnit', { n: currentStreak })} />
+
+        <MetricCard label={t('totalWorkoutsLabel')} value={totalWorkouts} />
 
         <MetricCard
-          label={t('streakLabel')}
-          value={currentStreak}
-          unit={t('daysUnit', { n: currentStreak })}
+          label={t('lastWorkoutLabel')}
+          value={lastWorkout ? formatDate(lastWorkout.date) : '—'}
         />
-
-        {latestInBody?.bodyFatPercentage !== null && latestInBody?.bodyFatPercentage !== undefined ? (
-          <MetricCard
-            label={t('bodyFatLabel')}
-            value={latestInBody.bodyFatPercentage.toFixed(1)}
-            unit="%"
-            delta={bodyFatDelta ?? undefined}
-          />
-        ) : (
-          <Card>
-            <EmptyState compact message={t('noInBodyBodyFat')} ctaLabel={t('addMeasurement')} ctaHref="/inbody/new" />
-          </Card>
-        )}
-
-        {latestInBody?.skeletalMuscleMassKg !== null && latestInBody?.skeletalMuscleMassKg !== undefined ? (
-          <MetricCard
-            label={t('muscleMassLabel')}
-            value={kgToDisplayUnit(latestInBody.skeletalMuscleMassKg, weightUnit)}
-            unit={weightUnit}
-            delta={muscleMassDelta ?? undefined}
-          />
-        ) : (
-          <Card>
-            <EmptyState compact message={t('noInBodyMuscleMass')} ctaLabel={t('addMeasurement')} ctaHref="/inbody/new" />
-          </Card>
-        )}
       </div>
 
-      <Card
-        className="mb-6"
-        title={t('streakTitle')}
-        action={<span className="text-xs text-text-faint">{t('streakCount', { n: trainedCountLast28, days: DAYS_BACK })}</span>}
-      >
-        <div className="flex gap-1 overflow-x-auto pb-0.5">
-          {streakDays.map((day) => (
-            <div
-              key={day.dateStr}
-              title={formatDate(day.dateStr)}
-              className={`h-3.5 w-3.5 shrink-0 rounded ${day.trained ? 'bg-accent' : 'bg-border'}`}
-            />
-          ))}
-        </div>
-      </Card>
+      {/* Quick Actions */}
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        <Button href="/workouts/new" className="px-4 py-2.5 text-xs">
+          {t('startWorkout')}
+        </Button>
+        <Button href="/measurements" variant="secondary" className="flex items-center gap-1.5 px-4 py-2.5 text-xs">
+          <ScaleIcon color="#C4F82A" size={16} />
+          {t('addMeasurement')}
+        </Button>
+        <Button href="/progress" variant="secondary" className="flex items-center gap-1.5 px-4 py-2.5 text-xs">
+          <ProgressIcon color="#C4F82A" size={16} />
+          {t('viewProgressCta')}
+        </Button>
+        <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
+        <Button href="/activities/new" variant="ghost" className="px-3 py-2 text-xs">
+          {t('logActivity')}
+        </Button>
+        <Button href="/goals" variant="ghost" className="px-3 py-2 text-xs">
+          {t('goalsLink')}
+        </Button>
+        <Button href="/exercises" variant="ghost" className="px-3 py-2 text-xs">
+          {t('exercisesLink')}
+        </Button>
+        <Button href="/programs" variant="ghost" className="px-3 py-2 text-xs">
+          {t('programsLink')}
+        </Button>
+      </div>
 
+      {/* Strength Progress */}
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card
           title={t('strengthProgressTitle')}
           action={
-            <Link href="/progress" className="text-xs text-accent no-underline">
+            <Link href="/progress" className="text-xs text-accent no-underline hover:underline">
               {t('viewProgress')}
             </Link>
           }
@@ -434,81 +453,130 @@ export default async function DashboardPage({ params }: Props) {
           {exerciseTrends.length === 0 ? (
             <EmptyState compact message={t('strengthProgressEmpty')} />
           ) : (
-            <StrengthTrendChart trends={exerciseTrends} weightUnit={weightUnit} />
+            <StrengthTrendChart
+              trends={exerciseTrends}
+              weightUnit={weightUnit}
+              noDataInRangeLabel={t('strengthNoDataInRange')}
+            />
           )}
         </Card>
 
-        <Card title={t('personalRecordsTitle')}>
-          {personalRecords.length === 0 ? (
-            <EmptyState compact message={t('personalRecordsEmpty')} />
-          ) : (
-            <div className="flex flex-col gap-3">
-              {personalRecords.map((pr) => (
-                <div key={pr.exerciseId} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <TrophyIcon color="#FFD700" size={18} />
-                    <span className="text-sm text-text">{pr.exerciseName}</span>
-                  </div>
-                  <span className="text-sm font-bold text-gold">
-                    {kgToDisplayUnit(pr.weight, weightUnit)} {weightUnit} × {pr.reps}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </Card>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Activity heatmap */}
         <Card
-          title={t('recentSessions')}
-          action={
-            <Link href="/history" className="text-xs text-accent no-underline">
-              {t('viewFullHistory')}
-            </Link>
-          }
+          title={t('streakTitle')}
+          action={<span className="text-xs text-text-faint">{t('streakCount', { n: trainedCountLast28, days: DAYS_BACK })}</span>}
         >
-          {sessionList.length === 0 ? (
-            <EmptyState compact message={t('noSessions')} ctaLabel={t('startWorkout')} ctaHref="/workouts/new" />
-          ) : (
-            <div className="flex flex-col gap-3">
-              {sessionList.map((s) => {
-                const bucket = setsBySession[s.id];
-                const exerciseNames = bucket ? Array.from(bucket.exerciseNames) : [];
-                return (
-                  <div key={s.id} className="border-b border-border pb-2.5 last:border-0 last:pb-0">
-                    <div className="flex justify-between text-[13px] text-text-muted">
-                      <span>{formatDate(s.date)}</span>
-                      <span>
-                        {bucket?.count ?? 0} {t('setsLabel')}
-                        {s.duration ? ` · ${s.duration} ${t('minutesLabel')}` : ''}
-                      </span>
-                    </div>
-                    <p className="m-0 mt-1 text-sm text-text">
-                      {exerciseNames.length > 0 ? exerciseNames.join(isArabic ? '، ' : ', ') : '—'}
-                    </p>
-                  </div>
-                );
-              })}
+          <div dir="ltr" className="overflow-x-auto py-0.5">
+            <div className="grid w-max grid-flow-col grid-rows-7 gap-[3px]">
+              {heatmapCells.map((day, i) =>
+                day ? (
+                  <div
+                    key={day.dateStr}
+                    title={`${formatDate(day.dateStr)}${day.trained ? ` · ${t('trainedLabel')}` : ''}`}
+                    className={`h-3.5 w-3.5 rounded-[4px] transition-transform hover:scale-110 ${
+                      day.trained ? 'bg-accent' : 'bg-border'
+                    }`}
+                  />
+                ) : (
+                  <div key={`pad-${i}`} className="h-3.5 w-3.5" />
+                )
+              )}
             </div>
-          )}
-        </Card>
-
-        <Card title={t('insights')}>
-          {insights.length === 0 ? (
-            <EmptyState compact message={t('insightsPlaceholder')} />
-          ) : (
-            <div className="flex flex-col gap-3">
-              {insights.map((insight, i) => (
-                <div key={i} className="flex items-start gap-2">
-                  <Badge tone={insightTone(insight)}>{t(`insightType.${insight.type}`)}</Badge>
-                  <p className="m-0 text-[13px] leading-relaxed text-text-muted">{insightMessage(insight)}</p>
-                </div>
-              ))}
-            </div>
-          )}
+          </div>
+          <div className="mt-3 flex items-center gap-2 text-[11px] text-text-faint">
+            <span className="h-2.5 w-2.5 rounded-sm bg-border" />
+            {t('legendRest')}
+            <span className="h-2.5 w-2.5 rounded-sm bg-accent" />
+            {t('legendTrained')}
+          </div>
         </Card>
       </div>
+
+      {/* Personal Records */}
+      <Card className="mb-6" title={t('personalRecordsTitle')}>
+        {personalRecords.length === 0 ? (
+          <EmptyState compact message={t('personalRecordsEmpty')} />
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {personalRecords.map((pr, i) => (
+              <div
+                key={pr.exerciseId}
+                className={`flex items-center justify-between rounded-lg border px-4 py-3 transition-colors hover:border-gold/40 ${
+                  i === 0 ? 'border-gold/25 bg-gold/[0.06]' : 'border-border bg-surface-raised'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <TrophyIcon color="#FFD700" size={18} />
+                  <span className="text-sm text-text">{pr.exerciseName}</span>
+                </div>
+                <span className="text-base font-bold text-gold">
+                  {kgToDisplayUnit(pr.weight, weightUnit)} {weightUnit}
+                  <span className="ms-1 text-xs font-normal text-text-faint">× {pr.reps}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* Smart Insights */}
+      <Card className="mb-6" title={t('insights')}>
+        {insights.length === 0 ? (
+          <EmptyState compact message={t('insightsPlaceholder')} />
+        ) : (
+          <div className="flex flex-col gap-3">
+            {insights.map((insight, i) => (
+              <div
+                key={i}
+                className="flex items-start gap-3 rounded-lg border-s-2 border-accent/50 bg-surface-raised/60 p-3 transition-colors hover:bg-surface-raised"
+              >
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent/10">
+                  <LightbulbIcon color="#C4F82A" size={15} />
+                </div>
+                <div>
+                  <Badge tone={insightTone(insight)}>{t(`insightType.${insight.type}`)}</Badge>
+                  <p className="m-0 mt-1.5 text-[13px] leading-relaxed text-text-muted">{insightMessage(insight)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {/* Recent Sessions */}
+      <Card
+        title={t('recentSessions')}
+        action={
+          <Link href="/history" className="text-xs text-accent no-underline hover:underline">
+            {t('viewFullHistory')}
+          </Link>
+        }
+      >
+        {sessionList.length === 0 ? (
+          <EmptyState compact message={t('noSessions')} ctaLabel={t('startWorkout')} ctaHref="/workouts/new" />
+        ) : (
+          <div className="flex flex-col gap-3">
+            {sessionList.map((s) => {
+              const bucket = setsBySession[s.id];
+              const exerciseNames = bucket ? Array.from(bucket.exerciseNames) : [];
+              return (
+                <div key={s.id} className="border-b border-border pb-2.5 last:border-0 last:pb-0">
+                  <div className="flex justify-between text-[13px] text-text-muted">
+                    <span>{formatDate(s.date)}</span>
+                    <span>
+                      {bucket?.count ?? 0} {t('setsLabel')}
+                      {s.duration ? ` · ${s.duration} ${t('minutesLabel')}` : ''}
+                    </span>
+                  </div>
+                  <p className="m-0 mt-1 text-sm text-text">
+                    {exerciseNames.length > 0 ? exerciseNames.join(isArabic ? '، ' : ', ') : '—'}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
     </div>
   );
 }

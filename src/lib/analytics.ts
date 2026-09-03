@@ -7,15 +7,6 @@ export function toLocalDateStr(d: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-export type GreetingPeriod = 'morning' | 'afternoon' | 'evening';
-
-export function getGreetingPeriod(date: Date): GreetingPeriod {
-  const hour = date.getHours();
-  if (hour < 12) return 'morning';
-  if (hour < 18) return 'afternoon';
-  return 'evening';
-}
-
 export type StreakDay = { date: Date; dateStr: string; trained: boolean };
 
 /** Builds the last `daysBack` days (inclusive of `today`), flagging which were trained. */

@@ -22,17 +22,17 @@ export default function MetricCard({ label, value, unit, delta, icon }: Props) {
     delta?.positive === true ? 'text-good' : delta?.positive === false ? 'text-warn' : 'text-text-muted';
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-4">
+    <div className="rounded-xl border border-border bg-surface p-4 transition-colors hover:border-text-faint/40">
       <div className="mb-2 flex items-center justify-between">
         <span className="text-xs font-medium text-text-muted">{label}</span>
         {icon}
       </div>
-      <div className="flex items-baseline gap-1">
-        <span className="text-2xl font-bold text-text">{value}</span>
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-[28px] font-bold leading-none tracking-tight text-text lg:text-3xl">{value}</span>
         {unit && <span className="text-sm text-text-muted">{unit}</span>}
       </div>
       {delta && (
-        <div className={`mt-1 text-xs font-semibold ${deltaColor}`}>
+        <div className={`mt-2 text-xs font-semibold ${deltaColor}`}>
           {ARROW[delta.direction]} {delta.text}
         </div>
       )}

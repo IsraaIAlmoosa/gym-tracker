@@ -9,6 +9,8 @@ const common = (size: number, color: string) => ({
   strokeWidth: 2,
   strokeLinecap: 'round' as const,
   strokeLinejoin: 'round' as const,
+  'aria-hidden': true as const,
+  focusable: 'false' as const,
 });
 
 export function HomeIcon({ color, size = 22 }: IconProps) {
@@ -101,6 +103,25 @@ export function CalendarIcon({ color, size = 22 }: IconProps) {
       <rect x="3" y="5" width="18" height="16" rx="2" />
       <path d="M3 10h18M8 3v4M16 3v4" />
       <path d="M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01" />
+    </svg>
+  );
+}
+
+export function LightbulbIcon({ color, size = 18 }: IconProps) {
+  return (
+    <svg {...common(size, color)}>
+      <path d="M9 18h6M10 21h4" />
+      <path d="M12 3a6 6 0 0 0-3.5 10.9c.6.44 1 .96 1 1.6H14.5c0-.64.4-1.16 1-1.6A6 6 0 0 0 12 3z" />
+    </svg>
+  );
+}
+
+export function ClipboardIcon({ color, size = 22 }: IconProps) {
+  return (
+    <svg {...common(size, color)}>
+      <rect x="6" y="4" width="12" height="17" rx="2" />
+      <path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" />
+      <path d="M9 11h6M9 15h6" />
     </svg>
   );
 }

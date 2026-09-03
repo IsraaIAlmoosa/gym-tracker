@@ -10,6 +10,39 @@ type SaveProfileInfoInput = {
 
 type SaveProfileInfoResult = { success: true } | { success: false; error: string };
 
+type SaveProfileNameInput = {
+  firstName: string | null;
+  lastName: string | null;
+};
+
+export async function saveProfileName(
+  input: SaveProfileNameInput
+): Promise<SaveProfileInfoResult> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: 'not_authenticated' };
+  }
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      first_name: input.firstName,
+      last_name: input.lastName,
+    })
+    .eq('id', user.id);
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true };
+}
+
 export async function saveProfileInfo(
   input: SaveProfileInfoInput
 ): Promise<SaveProfileInfoResult> {

@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { createClient } from '@/lib/supabase/server';
 import GenderSettingsForm from '@/components/GenderSettingsForm';
+import ProfileNameForm from '@/components/ProfileNameForm';
 import type { WeightUnit } from '@/lib/units';
 
 type Props = {
@@ -23,7 +24,7 @@ export default async function SettingsPage({ params }: Props) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('gender, age, preferred_weight_unit')
+    .select('first_name, last_name, gender, age, preferred_weight_unit')
     .eq('id', user.id)
     .maybeSingle();
 
@@ -48,6 +49,24 @@ export default async function SettingsPage({ params }: Props) {
       </a>
 
       <h1 style={{ fontSize: '24px', fontWeight: 700, margin: '10px 0 24px' }}>{t('title')}</h1>
+
+      <div
+        style={{
+          backgroundColor: '#171717',
+          border: '1px solid #262626',
+          borderRadius: '12px',
+          padding: '20px',
+          marginBottom: '16px',
+        }}
+      >
+        <p style={{ color: '#A3A3A3', fontSize: '13px', margin: '0 0 16px', lineHeight: 1.6 }}>
+          {t('nameLabel')}
+        </p>
+        <ProfileNameForm
+          initialFirstName={profile?.first_name ?? null}
+          initialLastName={profile?.last_name ?? null}
+        />
+      </div>
 
       <div
         style={{

@@ -133,7 +133,11 @@ export default async function ProgressPage({ params }: Props) {
           {exerciseTrends.length === 0 ? (
             <EmptyState compact message={t('strengthProgressEmpty')} />
           ) : (
-            <StrengthTrendChart trends={exerciseTrends} weightUnit={weightUnit} />
+            <StrengthTrendChart
+              trends={exerciseTrends}
+              weightUnit={weightUnit}
+              noDataInRangeLabel={t('strengthNoDataInRange')}
+            />
           )}
         </Card>
 
