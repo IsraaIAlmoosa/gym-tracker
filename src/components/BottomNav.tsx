@@ -19,7 +19,11 @@ export default function BottomNav() {
   const pathname = usePathname();
   const t = useTranslations('bottomNav');
 
-  if (pathname.startsWith('/login') || pathname.startsWith('/auth')) {
+  if (
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/reset-password')
+  ) {
     return null;
   }
 

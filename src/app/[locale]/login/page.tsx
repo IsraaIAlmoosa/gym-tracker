@@ -1,24 +1,46 @@
 'use client'
 
 import { useState, type FormEvent } from 'react'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { useParams, useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { Link } from '@/i18n/navigation'
+import { routing } from '@/i18n/routing'
+import { ProgressIcon, DumbbellIcon, TrophyIcon } from '@/components/ui/icons'
 
-type Mode = 'sign-in' | 'sign-up'
+type Mode = 'sign-in' | 'sign-up' | 'forgot-password'
+
+const localeLabels: Record<string, string> = { ar: 'العربية', en: 'English' }
+
+const INPUT_CLASS =
+  'w-full rounded-lg border border-border bg-bg px-3 py-2.5 text-sm text-text placeholder:text-text-faint focus:border-accent focus:outline-none'
+const LABEL_CLASS = 'mb-1.5 block text-xs text-text-muted'
 
 export default function LoginPage() {
   const params = useParams()
   const router = useRouter()
   const locale = params.locale as string
+  const dir = locale === 'ar' ? 'rtl' : 'ltr'
   const t = useTranslations('login')
 
   const [mode, setMode] = useState<Mode>('sign-in')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  // Display-only for now: @supabase/ssr always persists the session via a long-lived
+  // cookie (400 days) and ignores auth.storage, so there's no safe way from here to
+  // make this actually shorten the session without live-testing against the real
+  // Supabase project. Wiring it up for real is a small follow-up, not a blocker.
+  const [rememberMe, setRememberMe] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  const switchMode = (next: Mode) => {
+    setMode(next)
+    setError(null)
+    setMessage(null)
+  }
 
   const handleGoogleLogin = async () => {
     const supabase = createClient()
@@ -38,7 +60,17 @@ export default function LoginPage() {
 
     const supabase = createClient()
 
-    if (mode === 'sign-up') {
+    if (mode === 'forgot-password') {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/${locale}/reset-password`,
+      })
+
+      if (error) {
+        setError(error.message)
+      } else {
+        setMessage(t('resetEmailSent'))
+      }
+    } else if (mode === 'sign-up') {
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -65,83 +97,225 @@ export default function LoginPage() {
     setLoading(false)
   }
 
+  const features = [
+    { Icon: ProgressIcon, title: t('feature1Title'), desc: t('feature1Desc') },
+    { Icon: DumbbellIcon, title: t('feature2Title'), desc: t('feature2Desc') },
+    { Icon: TrophyIcon, title: t('feature3Title'), desc: t('feature3Desc') },
+  ]
+
+  const stats = [
+    { value: t('statUsersValue'), label: t('statUsersLabel') },
+    { value: t('statWorkoutsValue'), label: t('statWorkoutsLabel') },
+    { value: t('statAchievementsValue'), label: t('statAchievementsLabel') },
+  ]
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '24px', backgroundColor: '#0A0A0A' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '320px' }}>
-        <div style={{ display: 'flex', borderBottom: '1px solid #333' }}>
-          <button
-            type="button"
-            onClick={() => setMode('sign-in')}
-            style={{
-              flex: 1,
-              padding: '12px',
-              backgroundColor: 'transparent',
-              color: mode === 'sign-in' ? 'white' : '#777',
-              borderBottom: mode === 'sign-in' ? '2px solid white' : '2px solid transparent',
-              fontWeight: 500,
-            }}
-          >
-            {t('signInTab')}
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('sign-up')}
-            style={{
-              flex: 1,
-              padding: '12px',
-              backgroundColor: 'transparent',
-              color: mode === 'sign-up' ? 'white' : '#777',
-              borderBottom: mode === 'sign-up' ? '2px solid white' : '2px solid transparent',
-              fontWeight: 500,
-            }}
-          >
-            {t('signUpTab')}
-          </button>
+    <div className="flex min-h-screen bg-bg" dir="ltr">
+      {/* Hero panel — image side always renders first (left) regardless of locale */}
+      <div className="relative hidden w-1/2 overflow-hidden lg:block" dir={dir}>
+        <Image src="/auth-hero.png" alt="" fill priority sizes="50vw" className="object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/10" />
+
+        <div className="relative z-10 flex h-full flex-col justify-between p-10 xl:p-14">
+          <span className="text-lg font-extrabold tracking-tight text-white">GYM TRACKER</span>
+
+          <div>
+            <h1 className="m-0 max-w-md text-4xl font-extrabold leading-tight text-white xl:text-5xl">
+              {t('heroTitle')} <span className="text-accent">{t('heroTitleAccent')}</span>
+            </h1>
+            <p className="mt-4 max-w-sm text-sm text-white/80">{t('heroSubtitle')}</p>
+
+            <div className="mt-8 flex flex-col gap-4">
+              {features.map(({ Icon, title, desc }) => (
+                <div key={title} className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10">
+                    <Icon color="#C4F82A" size={20} />
+                  </div>
+                  <div>
+                    <p className="m-0 text-sm font-semibold text-white">{title}</p>
+                    <p className="m-0 text-xs text-white/70">{desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <p className="m-0 mt-8 max-w-sm border-s-2 border-accent ps-3 text-sm italic text-white/70">
+              {t('quote')}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-6">
+            {stats.map((s) => (
+              <div key={s.label}>
+                <div className="text-lg font-extrabold text-white">{s.value}</div>
+                <div className="text-xs text-white/60">{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Form panel */}
+      <div className="flex w-full flex-col lg:w-1/2" dir={dir}>
+        <div className="flex justify-end p-4">
+          <div className="flex items-center gap-2 text-xs">
+            {routing.locales.map((loc) => (
+              <Link
+                key={loc}
+                href="/login"
+                locale={loc}
+                className={
+                  loc === locale
+                    ? 'font-semibold text-accent no-underline'
+                    : 'text-text-faint no-underline hover:text-text'
+                }
+              >
+                {localeLabels[loc]}
+              </Link>
+            ))}
+          </div>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <input
-            type="email"
-            placeholder={t('emailPlaceholder')}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{ padding: '12px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#1A1A1A', color: 'white' }}
-          />
-          <input
-            type="password"
-            placeholder={t('passwordPlaceholder')}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={6}
-            style={{ padding: '12px', borderRadius: '8px', border: '1px solid #333', backgroundColor: '#1A1A1A', color: 'white' }}
-          />
+        <div className="flex flex-1 items-center justify-center px-4 pb-10">
+          <div className="w-full max-w-sm">
+            <div className="mb-6 flex items-center gap-2 lg:hidden">
+              <span className="text-lg font-extrabold tracking-tight text-text">GYM TRACKER</span>
+            </div>
 
-          {error && <p style={{ color: '#f87171', fontSize: '14px' }}>{error}</p>}
-          {message && <p style={{ color: '#4ade80', fontSize: '14px' }}>{message}</p>}
+            {mode !== 'forgot-password' && (
+              <div className="mb-6 flex border-b border-border">
+                <button
+                  type="button"
+                  onClick={() => switchMode('sign-in')}
+                  className={`flex-1 border-b-2 pb-3 text-sm font-semibold ${
+                    mode === 'sign-in' ? 'border-accent text-text' : 'border-transparent text-text-faint'
+                  }`}
+                >
+                  {t('signInTab')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchMode('sign-up')}
+                  className={`flex-1 border-b-2 pb-3 text-sm font-semibold ${
+                    mode === 'sign-up' ? 'border-accent text-text' : 'border-transparent text-text-faint'
+                  }`}
+                >
+                  {t('signUpTab')}
+                </button>
+              </div>
+            )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            style={{ borderRadius: '8px', backgroundColor: 'white', padding: '12px 24px', color: 'black', fontWeight: 500, opacity: loading ? 0.6 : 1 }}
-          >
-            {mode === 'sign-up' ? t('createAccount') : t('signIn')}
-          </button>
-        </form>
+            <h2 className="m-0 text-xl font-bold text-text">
+              {mode === 'forgot-password'
+                ? t('resetPasswordTitle')
+                : mode === 'sign-up'
+                  ? t('createAccountTitle')
+                  : t('welcomeBackTitle')}
+            </h2>
+            <p className="mt-1 text-sm text-text-muted">
+              {mode === 'forgot-password'
+                ? t('resetPasswordSubtitle')
+                : mode === 'sign-up'
+                  ? t('createAccountSubtitle')
+                  : t('welcomeBackSubtitle')}
+            </p>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#555' }}>
-          <div style={{ flex: 1, height: '1px', backgroundColor: '#333' }} />
-          <span style={{ fontSize: '12px' }}>{t('or')}</span>
-          <div style={{ flex: 1, height: '1px', backgroundColor: '#333' }} />
+            <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+              <div>
+                <label className={LABEL_CLASS} htmlFor="login-email">
+                  {t('emailPlaceholder')}
+                </label>
+                <input
+                  id="login-email"
+                  type="email"
+                  placeholder={t('emailPlaceholder')}
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className={INPUT_CLASS}
+                />
+              </div>
+
+              {mode !== 'forgot-password' && (
+                <div>
+                  <label className={LABEL_CLASS} htmlFor="login-password">
+                    {t('passwordPlaceholder')}
+                  </label>
+                  <input
+                    id="login-password"
+                    type="password"
+                    placeholder={t('passwordPlaceholder')}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    className={INPUT_CLASS}
+                  />
+                </div>
+              )}
+
+              {mode === 'sign-in' && (
+                <div className="flex items-center justify-between text-xs">
+                  <label className="flex items-center gap-2 text-text-muted">
+                    <input
+                      type="checkbox"
+                      checked={rememberMe}
+                      onChange={(e) => setRememberMe(e.target.checked)}
+                      className="h-4 w-4 rounded border-border accent-accent"
+                    />
+                    {t('rememberMe')}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => switchMode('forgot-password')}
+                    className="border-none bg-transparent p-0 text-accent no-underline hover:underline"
+                  >
+                    {t('forgotPassword')}
+                  </button>
+                </div>
+              )}
+
+              {error && <p className="m-0 text-sm text-warn">{error}</p>}
+              {message && <p className="m-0 text-sm text-good">{message}</p>}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3 text-sm font-bold text-accent-ink transition-opacity hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {mode === 'forgot-password' ? t('sendResetLink') : mode === 'sign-up' ? t('createAccount') : t('signIn')}
+              </button>
+
+              {mode === 'forgot-password' && (
+                <button
+                  type="button"
+                  onClick={() => switchMode('sign-in')}
+                  className="border-none bg-transparent p-0 text-sm text-text-muted hover:text-text"
+                >
+                  {t('backToSignIn')}
+                </button>
+              )}
+            </form>
+
+            {mode !== 'forgot-password' && (
+              <>
+                <div className="my-5 flex items-center gap-3 text-text-faint">
+                  <div className="h-px flex-1 bg-border" />
+                  <span className="text-xs">{t('or')}</span>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleGoogleLogin}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-border bg-surface px-6 py-3 text-sm font-semibold text-text transition-colors hover:bg-surface-raised"
+                >
+                  {t('signInWithGoogle')}
+                </button>
+              </>
+            )}
+          </div>
         </div>
-
-        <button
-          onClick={handleGoogleLogin}
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', borderRadius: '8px', backgroundColor: 'white', padding: '12px 24px', color: 'black', fontWeight: 500 }}
-        >
-          {t('signInWithGoogle')}
-        </button>
       </div>
     </div>
   )

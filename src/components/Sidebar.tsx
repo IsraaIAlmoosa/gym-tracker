@@ -26,7 +26,11 @@ export default function Sidebar() {
   const t = useTranslations('bottomNav');
   const tSign = useTranslations('dashboard');
 
-  if (pathname.startsWith('/login') || pathname.startsWith('/auth')) {
+  if (
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/reset-password')
+  ) {
     return null;
   }
 
