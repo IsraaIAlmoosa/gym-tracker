@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from 'react'
 import Image from 'next/image'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, setRememberMePreference } from '@/lib/supabase/client'
 import { useParams, useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
@@ -27,10 +27,9 @@ export default function LoginPage() {
   const [mode, setMode] = useState<Mode>('sign-in')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  // Display-only for now: @supabase/ssr always persists the session via a long-lived
-  // cookie (400 days) and ignores auth.storage, so there's no safe way from here to
-  // make this actually shorten the session without live-testing against the real
-  // Supabase project. Wiring it up for real is a small follow-up, not a blocker.
+  // Wired to a real short vs. long session — see setRememberMePreference /
+  // src/lib/supabase/remember-me.ts for how this survives @supabase/ssr
+  // always trying to persist the session cookie for 400 days.
   const [rememberMe, setRememberMe] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
@@ -85,6 +84,11 @@ export default function LoginPage() {
         setMessage(t('checkEmail'))
       }
     } else {
+      // Must be set before signing in: the browser client reads this cookie
+      // synchronously, from inside signInWithPassword's own cookie writes,
+      // to decide whether the session cookie should persist or expire with
+      // the browser session.
+      setRememberMePreference(rememberMe)
       const { error } = await supabase.auth.signInWithPassword({ email, password })
 
       if (error) {
@@ -178,8 +182,16 @@ export default function LoginPage() {
 
         <div className="flex flex-1 items-center justify-center px-4 pb-10">
           <div className="w-full max-w-sm">
-            <div className="mb-6 flex items-center gap-2 lg:hidden">
-              <span className="text-lg font-extrabold tracking-tight text-text">GYM TRACKER</span>
+            {/* Mobile hero banner — condensed version of the desktop hero panel */}
+            <div className="relative mb-6 h-40 overflow-hidden rounded-2xl lg:hidden" dir={dir}>
+              <Image src="/auth-hero.png" alt="" fill priority sizes="100vw" className="object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-transparent" />
+              <div className="relative z-10 flex h-full flex-col justify-end p-4">
+                <span className="mb-1 text-xs font-bold tracking-tight text-white/80">GYM TRACKER</span>
+                <h1 className="m-0 text-lg font-extrabold leading-tight text-white">
+                  {t('heroTitle')} <span className="text-accent">{t('heroTitleAccent')}</span>
+                </h1>
+              </div>
             </div>
 
             {mode !== 'forgot-password' && (
